@@ -225,7 +225,7 @@ test("focusIndexFromSearch falls back to the first chapter", () => {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `node --test tests/`
+Run: `node --test`
 Expected: FAIL — `Cannot find module '../shared/ring.js'`
 
 - [ ] **Step 3: Write the implementation**
@@ -339,7 +339,7 @@ Create `shared/ring.js`:
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `node --test tests/`
+Run: `node --test`
 Expected: PASS — all tests, 0 failures. If `ringRadius` fails the chord assertion, `CARD_GAP_FACTOR` is below 1.0; it must be >= 1.0.
 
 - [ ] **Step 5: Commit**
@@ -1114,7 +1114,7 @@ test("every slot is reachable as a focus target at any ring size", () => {
 
 - [ ] **Step 2: Run tests**
 
-Run: `node --test tests/`
+Run: `node --test`
 Expected: PASS, 0 failures.
 
 - [ ] **Step 3: Stress the hub with 12 chapters**
@@ -1128,7 +1128,7 @@ Confirm in the browser:
 3. Drag, snap, and arrow keys still move exactly one card per step.
 4. Focus text tracks correctly all the way around.
 
-If cards overlap, raise `CARD_GAP_FACTOR` in `shared/ring.js` and re-run `node --test tests/`. If the ring overflows the viewport, cap the stage scale in `shared/base.css` rather than shrinking the radius.
+If cards overlap, raise `CARD_GAP_FACTOR` in `shared/ring.js` and re-run `node --test`. If the ring overflows the viewport, cap the stage scale in `shared/base.css` rather than shrinking the radius.
 
 Then **revert `chapters.js`** to the real 6-entry manifest.
 
@@ -1299,7 +1299,7 @@ git commit -m "docs: add chapter template and add-a-chapter procedure"
 
 - [ ] **Step 1: Run the full test suite**
 
-Run: `node --test tests/`
+Run: `node --test`
 Expected: PASS, 0 failures. Record the actual count in the commit or PR body.
 
 - [ ] **Step 2: Confirm the working tree is clean of scratch edits**
