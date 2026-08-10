@@ -19,6 +19,9 @@ dependencies, works when opened by double-click.
 | Question | Decision |
 |---|---|
 | Hitting an obstacle | Stumble + **lose one heart**. Never a death, never a restart. |
+| Sliding | **Held** — down while the button is held, no fixed duration. |
+| Difficulty | Slower speed curve than the first build; the game was too hard. |
+| Guidance | Intro control card **and** floating hints over the first four of each obstacle kind. |
 | Characters | Their real faces (cropped from `Pic1.JPG`) on code-drawn bodies. No sprites. |
 | Run length | ~120 seconds. |
 | Music | **Chiptune (WebAudio) during the run**, piano cover the moment the letter appears. |
@@ -98,8 +101,13 @@ takes a state object and draws it, and it owns no rules.
 
 ### Speed curve
 
-`speedAt(progress)` ramps **260 → 420 px/s** across the first 85%, then jumps to
-**520 px/s** for the final chase. Integrated, that is about 120 seconds.
+`speedAt(progress)` ramps **210 → 340 px/s** across the first 85%, then jumps to
+**430 px/s** for the final chase. `LEVEL_LENGTH` is tuned so this still integrates
+to about 120 seconds.
+
+These were originally 260 → 420 → 520. They came down after playtesting said the
+game was too hard: a gentler opening gives her room to learn the controls before
+anything is demanding.
 
 ### Player physics
 
@@ -109,7 +117,7 @@ takes a state object and draws it, and it owns no rules.
 | Jump velocity | −620 px/s (≈107px high, ≈0.69s airborne) |
 | Standing hitbox | 44 × 72 |
 | Sliding hitbox | 60 × 34 |
-| Slide duration | 0.5s, cannot start while airborne |
+| Slide | **held**, minimum 0.25s, cannot start while airborne |
 
 ### Obstacles
 
@@ -124,6 +132,21 @@ A 107px jump clears a 54px obstacle comfortably, and a 34px slide hitbox passes
 under a 48px gap with 14px to spare. Both have margin on purpose: this is a gift,
 not a precision platformer. (An earlier draft said 40px gap against a 36px hitbox,
 which leaves only 4px — precise enough to feel unfair, so both numbers moved.)
+
+### Sliding is held, not timed
+
+Slide begins when the button is **held** and she is on the ground, and continues
+until she releases it, jumps, or leaves the ground. There is no maximum. A 0.25s
+minimum means a quick tap still produces a visible slide rather than a one-frame
+flicker.
+
+This replaces a fixed 0.75s slide. A timed slide made the *press moment* the
+challenge — at the opening speed the window was 69ms before the duration was
+widened, and even at 0.75s it was a timing test. Holding removes the timing
+question entirely: she can press early and stay down until the thing has passed.
+That is the single biggest reason the chapter is now easier.
+
+Jump still cancels a slide, so holding SLIDE never traps her.
 
 ### HUD
 
@@ -178,8 +201,27 @@ it reveals `secret.jpg` with a caption.
 
 | Action | Desktop | Mobile |
 |---|---|---|
-| Jump | `↑`, `W`, `Space` | large left button, or swipe up |
-| Slide | `↓`, `S` | large right button, or swipe down |
+| Jump (press) | `↑`, `W`, `Space` | large left button, or swipe up |
+| Slide (hold) | hold `↓` or `S` | hold the large right button |
+
+Swipe-down is gone: you cannot hold a swipe. On a phone, sliding means holding the
+SLIDE button. Swipe-up to jump still works, because a jump is a single press.
+
+**Two kinds of signal.** Jump is edge-triggered — one press, one jump, and holding
+the key does nothing extra. Slide is level-triggered — its value is read every
+frame. The QTE must use the *rising edge* of the slide signal, not its value, or
+holding the button would satisfy several prompts at once.
+
+### Guidance
+
+Two layers, because the controls are now unusual enough to need saying out loud:
+
+1. **An intro card** between the cutscene and the countdown: `⬆ JUMP over things on
+   the ground` and `⬇ HOLD to SLIDE under things`, dismissed by tapping.
+2. **Floating hints in the world** — a `⬆` or `⬇ HOLD` above the **first four
+   obstacles of each kind** as they approach, then nothing. Which obstacles carry a
+   hint is a `hint` flag set during level generation, so it is pure and testable
+   rather than a magic number inside the renderer.
 
 The on-screen buttons are always visible on touch devices, sized for thumbs at the
 bottom corners.
@@ -199,6 +241,15 @@ bottom corners.
 
 - Jump arc reaches at least obstacle height and returns to ground.
 - Sliding hitbox fits under a slide obstacle; standing hitbox does not.
+- A held slide persists indefinitely; releasing ends it; the 0.25s minimum holds
+  through a one-frame tap; jump cancels it; it cannot start airborne.
+- A slide held from before an obstacle until after it never collides. (This
+  replaces the old slide *timing-window* test, which is meaningless now that the
+  window is unbounded. The jump timing-window test stays.)
+- The QTE advances exactly **once** when the slide button is held down across many
+  frames — the rising-edge requirement.
+- Level generation flags exactly four `jump` and four `slide` obstacles with
+  `hint: true`, and they are the earliest of each kind.
 - Collision detection: overlap, touching edges, clean misses.
 - `speedAt` and `gapAt` are monotonic and hit their endpoints.
 - Heart accounting: collect increments, trip decrements, never below zero.
