@@ -319,6 +319,20 @@ test("a wrong QTE input re-prompts instead of failing or advancing", () => {
   assert.equal(q.index, 1, "the right input still works after a miss");
 });
 
+/*
+ * The QTE reads an ACTION, and with a held slide the caller must convert the held
+ * value into a rising edge before calling qteAdvance. This test pins the rule at
+ * the rules level: repeated identical calls advance repeatedly, so the caller is
+ * the one that must not repeat them. Do not "fix" this by making qteAdvance
+ * swallow repeats — JUMP→JUMP legitimately needs two presses in a row.
+ */
+test("qteAdvance advances on every call, so callers must edge-detect a held button", () => {
+  let q = R.newQte();
+  q = R.qteAdvance(q, "jump");
+  q = R.qteAdvance(q, "jump");
+  assert.equal(q.index, 2, "two calls advance twice - hence main.js must send one call per press");
+});
+
 test("qteAdvance does not mutate and ignores input once done", () => {
   let q = R.newQte();
   const snapshot = JSON.parse(JSON.stringify(q));

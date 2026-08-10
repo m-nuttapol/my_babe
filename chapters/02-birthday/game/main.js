@@ -49,6 +49,7 @@
     qtePrompt: null,
     qteFlash: 0,
     qteGapStart: C.GAP_END,
+    prevSlideHeld: false,
   };
 
   let acc = 0;
@@ -102,8 +103,13 @@
     });
   }
 
+  /*
+   * Rising edge only. slideHeld stays true for as long as the button is down, so
+   * reading its value would satisfy several prompts from a single hold.
+   */
   function handleQte(intent) {
-    const action = intent.jump ? "jump" : (intent.slide ? "slide" : null);
+    const slideEdge = intent.slideHeld && !state.prevSlideHeld;
+    const action = intent.jump ? "jump" : (slideEdge ? "slide" : null);
     if (!action) return;
 
     const before = state.qte.index;
@@ -176,6 +182,10 @@
     if (state.shake > 0) state.shake = Math.max(0, state.shake - dt * 40);
     if (state.heartFlash > 0) state.heartFlash = Math.max(0, state.heartFlash - dt);
     if (state.qteFlash > 0) state.qteFlash = Math.max(0, state.qteFlash - dt);
+
+    // Last thing, after every other read of intent: this is what makes the QTE
+    // see one action per press instead of one per frame held.
+    state.prevSlideHeld = intent.slideHeld;
   }
 
   function frame(now) {
@@ -191,7 +201,12 @@
     const running = state.scene === "run" || state.scene === "finalChase";
     while (acc >= STEP) {
       if (running) update(STEP, intent);
-      intent = { jump: false, slide: false };
+      /*
+       * Only the first physics step of a frame gets the press, so one press is
+       * one jump. slideHeld is carried through every step, because a held button
+       * is still held for the whole frame.
+       */
+      intent = { jump: false, slideHeld: intent.slideHeld };
       acc -= STEP;
     }
 
