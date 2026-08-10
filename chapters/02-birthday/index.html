@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Catch Me If You Can</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0b1020; overflow: hidden;
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: #fff;
+      -webkit-user-select: none; user-select: none; }
+    #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+    canvas { display: block; background: #0b1020; touch-action: none; }
+
+    .chapter-back { position: fixed; top: 12px; left: 12px; z-index: 60; padding: 7px 13px;
+      border-radius: 999px; background: rgba(0,0,0,.5); color: #fff; text-decoration: none;
+      font: 500 11px/1 ui-sans-serif, system-ui; letter-spacing: .1em; text-transform: uppercase;
+      border: 1px solid rgba(255,255,255,.25); }
+
+    /* Touch controls: only on devices that actually need them. */
+    #touch { position: fixed; bottom: 0; left: 0; right: 0; height: 132px; display: none;
+      z-index: 50; pointer-events: none; }
+    @media (pointer: coarse) { #touch { display: flex; } }
+    #touch button { pointer-events: auto; flex: 1; margin: 12px; border: 0; border-radius: 20px;
+      background: rgba(255,255,255,.14); color: #fff; font: 800 20px/1 ui-sans-serif, system-ui;
+      letter-spacing: .12em; backdrop-filter: blur(6px); }
+    #touch button:active { background: rgba(255,255,255,.3); }
+
+    .overlay { position: fixed; inset: 0; z-index: 55; display: flex; align-items: center;
+      justify-content: center; background: rgba(6,9,20,.82); backdrop-filter: blur(3px);
+      padding: 24px; text-align: center; }
+    .overlay[hidden] { display: none; }
+    .overlay-inner { max-width: 560px; }
+    .line { font: 800 clamp(20px, 4.4vw, 34px)/1.3 ui-sans-serif, system-ui; margin: 0 0 14px; }
+    .line.small { font-size: clamp(15px, 3vw, 20px); font-weight: 600; opacity: .85; }
+    .count { font: 900 clamp(60px, 16vw, 130px)/1 ui-sans-serif, system-ui; margin: 0; }
+    .tap { margin-top: 22px; padding: 12px 26px; border-radius: 999px; border: 1px solid rgba(255,255,255,.4);
+      background: transparent; color: #fff; font: 700 13px/1 ui-sans-serif, system-ui;
+      letter-spacing: .16em; text-transform: uppercase; cursor: pointer; }
+    .tap:hover { background: rgba(255,255,255,.14); }
+
+    .letter { position: fixed; inset: 0; z-index: 70; overflow-y: auto;
+      background: linear-gradient(180deg, #fff6f8 0%, #ffeaf0 100%); color: #2a2530;
+      padding: 40px 22px 80px; }
+    .letter[hidden] { display: none; }
+    .letter-inner { max-width: 620px; margin: 0 auto; text-align: center; }
+    .letter img.couple { width: 100%; max-width: 420px; border-radius: 20px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.22); }
+    .letter h1 { font: 700 clamp(28px, 6vw, 44px)/1.2 ui-serif, Georgia, serif; margin: 26px 0 6px; }
+    .letter .body { text-align: left; font: 400 16px/1.85 ui-serif, Georgia, serif;
+      white-space: pre-line; margin: 22px 0 0; }
+    .letter .placeholder { background: #fff3c4; border: 1px dashed #c9a227; border-radius: 12px;
+      padding: 14px 16px; font-family: ui-monospace, monospace; font-size: 13px; text-align: left;
+      white-space: pre-line; margin-top: 18px; }
+    .secret { margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(0,0,0,.12); }
+    .secret button { padding: 13px 26px; border-radius: 999px; border: 0; background: #2a2530;
+      color: #fff; font: 700 13px/1 ui-sans-serif, system-ui; letter-spacing: .16em;
+      text-transform: uppercase; cursor: pointer; }
+    .secret img { width: 100%; max-width: 420px; border-radius: 18px; margin-top: 18px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.22); }
+    .locked { margin-top: 34px; font: 500 13px/1.6 ui-sans-serif, system-ui; opacity: .6; }
+  </style>
+</head>
+<body>
+  <a class="chapter-back" href="../../index.html?from=02-birthday">&#8592; chapters</a>
+  <button id="muteBtn" class="chapter-back" style="left:auto;right:12px;cursor:pointer"
+          aria-label="mute">&#128266;</button>
+
+  <div id="wrap"><canvas id="game"></canvas></div>
+
+  <div id="touch">
+    <button id="btnJump" aria-label="jump">JUMP</button>
+    <button id="btnSlide" aria-label="slide">SLIDE</button>
+  </div>
+
+  <div id="overlay" class="overlay" hidden>
+    <div id="overlayInner" class="overlay-inner"></div>
+  </div>
+
+  <div id="letter" class="letter" hidden><div class="letter-inner" id="letterInner"></div></div>
+
+  <script src="game/rules.js"></script>
+  <script src="game/level.js"></script>
+  <script src="game/input.js"></script>
+  <script src="game/audio.js"></script>
+  <script src="game/render.js"></script>
+  <script src="game/scenes.js"></script>
+  <script src="game/main.js"></script>
+</body>
+</html>

@@ -118,6 +118,57 @@ test("the sliding player clears a slide obstacle by a forgiving margin", () => {
   assert.ok(margin >= 10, `only ${margin}px of slide clearance - too precise for a gift`);
 });
 
+/*
+ * Fairness invariant. Clearing an obstacle is not about whether the jump is tall
+ * enough — it is about how many milliseconds she has to press. Both windows are
+ * narrowest at the SLOWEST speed, because a shorter travel distance means less
+ * room for error, which is the opposite of the intuition.
+ */
+const MIN_WINDOW_MS = 120;
+
+function jumpWindowMs(speed) {
+  const V = -C.JUMP_V;
+  const air = (2 * V) / C.GRAVITY;
+  const tUp = (V - Math.sqrt(V * V - 2 * C.GRAVITY * C.JUMP_OBS_H)) / C.GRAVITY;
+  const half = (C.STAND_W + C.JUMP_OBS_W) / 2;
+  const latest = half + tUp * speed;             // leave the ground by here
+  const earliest = (air - tUp) * speed - half;   // any earlier and she lands on it
+  return ((earliest - latest) / speed) * 1000;
+}
+
+function slideWindowMs(speed) {
+  const half = (C.SLIDE_W + C.SLIDE_OBS_W) / 2;
+  return ((C.SLIDE_DURATION * speed - 2 * half) / speed) * 1000;
+}
+
+test("the jump timing window is humane at every speed in the level", () => {
+  for (const s of [C.SPEED_START, 320, 380, C.SPEED_END, C.SPEED_FINAL]) {
+    const ms = jumpWindowMs(s);
+    assert.ok(ms >= MIN_WINDOW_MS, `at ${s}px/s a jump allows only ${ms.toFixed(0)}ms`);
+  }
+});
+
+test("the slide timing window is humane at every speed in the level", () => {
+  for (const s of [C.SPEED_START, 320, 380, C.SPEED_END, C.SPEED_FINAL]) {
+    const ms = slideWindowMs(s);
+    assert.ok(ms >= MIN_WINDOW_MS, `at ${s}px/s a slide allows only ${ms.toFixed(0)}ms`);
+  }
+});
+
+test("the tightest window is at the start, where she is still learning", () => {
+  assert.ok(jumpWindowMs(C.SPEED_START) < jumpWindowMs(C.SPEED_FINAL));
+  assert.ok(slideWindowMs(C.SPEED_START) < slideWindowMs(C.SPEED_FINAL));
+});
+
+test("sliding does not sneak her under a ground obstacle", () => {
+  const sliding = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slide: true });
+  assert.equal(
+    R.boxesOverlap(R.playerBox(sliding), R.jumpObstacleBox(C.PLAYER_X)),
+    true,
+    "a longer slide must not become a way to pass through jump obstacles"
+  );
+});
+
 test("speed ramps from SPEED_START to SPEED_END then jumps for the final chase", () => {
   assert.equal(R.speedAt(0), C.SPEED_START);
   assert.ok(Math.abs(R.speedAt(C.FINAL_CHASE_AT - 0.001) - C.SPEED_END) < 2);

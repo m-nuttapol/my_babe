@@ -27,7 +27,13 @@
     STAND_H: 72,
     SLIDE_W: 60,
     SLIDE_H: 34,
-    SLIDE_DURATION: 0.5,
+    /*
+     * 0.75s, not the 0.5s originally specced. At the level's opening speed of
+     * 260px/s a 0.5s slide covers 130px against a 112px collision zone, leaving
+     * a 69ms window to press — tighter than the jump's and tighter than human
+     * timing. 0.75s gives ~320ms there. See the timing-window test.
+     */
+    SLIDE_DURATION: 0.75,
 
     JUMP_OBS_W: 46,
     JUMP_OBS_H: 54,
