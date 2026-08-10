@@ -63,6 +63,29 @@
     return radius - ringRadius(MIN_SLOTS, cardSize);
   }
 
+  /*
+   * How wide the ring renders, mirroring what CSS perspective does: the side
+   * cards sit at x = +/-radius at depth -zOffset, and perspective scales them by
+   * P / (P - z).
+   */
+  function projectedRingWidth(slots, cardSize, perspective) {
+    const r = ringRadius(slots, cardSize);
+    const z = -ringZOffset(r, cardSize);
+    const scale = perspective / (perspective - z);
+    return 2 * (r + cardSize / 2) * scale;
+  }
+
+  /*
+   * Shrink factor needed to keep the ring inside the viewport. A 6-slot ring of
+   * 150px cards is already ~930px wide, so on a phone it must scale down; never
+   * scale up, or a small ring would balloon on a big screen.
+   */
+  function fitScale(projectedWidth, viewportWidth, margin) {
+    const usable = viewportWidth * (typeof margin === "number" ? margin : 0.92);
+    if (!(projectedWidth > 0)) return 1;
+    return Math.min(1, usable / projectedWidth);
+  }
+
   function padToSlots(chapters, slots) {
     const out = chapters.slice();
     for (let i = out.length; i < slots; i++) {
@@ -109,6 +132,8 @@
     ringSlots: ringSlots,
     ringRadius: ringRadius,
     ringZOffset: ringZOffset,
+    projectedRingWidth: projectedRingWidth,
+    fitScale: fitScale,
     slotAngle: slotAngle,
     nearestSlotIndex: nearestSlotIndex,
     snapRotation: snapRotation,

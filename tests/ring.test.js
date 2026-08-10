@@ -159,3 +159,64 @@ test("focusIndexFromSearch falls back to the first chapter", () => {
   assert.equal(Ring.focusIndexFromSearch("?from=nope", chapters), 0);
   assert.equal(Ring.focusIndexFromSearch("?other=1", chapters), 0);
 });
+
+test("ring grows past the six-slot floor as chapters are added", () => {
+  const many = Array.from({ length: 14 }, (_, i) => ({
+    id: String(i + 1).padStart(2, "0") + "-c",
+    status: "ready",
+  }));
+  const chapters = Ring.normalizeChapters(many);
+  const slots = Ring.ringSlots(chapters.length);
+  assert.equal(slots, 14);
+  assert.equal(Ring.padToSlots(chapters, slots).length, 14);
+  const angles = Array.from({ length: slots }, (_, i) => Ring.slotAngle(i, slots));
+  assert.equal(new Set(angles).size, slots, "every slot must sit at a distinct angle");
+});
+
+const PERSPECTIVE = 1200;
+
+test("projectedRingWidth grows with the ring", () => {
+  const six = Ring.projectedRingWidth(6, 150, PERSPECTIVE);
+  const twenty = Ring.projectedRingWidth(20, 150, PERSPECTIVE);
+  assert.ok(six > 0);
+  assert.ok(twenty > six, `expected ${twenty} > ${six}`);
+});
+
+test("fitScale keeps the ring inside the viewport at every size and both card sizes", () => {
+  const viewports = [
+    { w: 1440, card: 150 },
+    { w: 1280, card: 150 },
+    { w: 1024, card: 150 },
+    { w: 390, card: 108 },   // phone, mobile breakpoint card size
+    { w: 320, card: 108 },   // smallest phone worth supporting
+  ];
+  for (const v of viewports) {
+    for (const slots of [6, 8, 12, 20, 30]) {
+      const width = Ring.projectedRingWidth(slots, v.card, PERSPECTIVE);
+      const scaled = width * Ring.fitScale(width, v.w);
+      assert.ok(
+        scaled <= v.w,
+        `viewport=${v.w} slots=${slots} still ${scaled.toFixed(0)}px after scaling`
+      );
+    }
+  }
+});
+
+test("fitScale never magnifies a ring that already fits", () => {
+  assert.equal(Ring.fitScale(400, 1440), 1);
+  assert.equal(Ring.fitScale(0, 1440), 1);
+});
+
+test("fitScale does shrink the default ring on a phone", () => {
+  const width = Ring.projectedRingWidth(6, 108, PERSPECTIVE);
+  assert.ok(Ring.fitScale(width, 390) < 1, "a 6-slot ring overflows a 390px phone and must scale down");
+});
+
+test("every slot is reachable as a focus target at any ring size", () => {
+  for (const slots of [6, 7, 14, 20]) {
+    const step = 360 / slots;
+    for (let i = 0; i < slots; i++) {
+      assert.equal(Ring.nearestSlotIndex(-i * step, slots), i, `slots=${slots} i=${i}`);
+    }
+  }
+});

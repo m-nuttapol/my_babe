@@ -17,18 +17,22 @@
   const chapters = R.normalizeChapters(window.CHAPTERS);
   const slots = R.ringSlots(chapters.length);
   const cards = R.padToSlots(chapters, slots);
-  const cardSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--card")) || 150;
-  const radius = R.ringRadius(slots, cardSize);
-  const zOffset = R.ringZOffset(radius, cardSize);
+  // Must match the perspective in base.css — the fit calculation depends on it.
+  const PERSPECTIVE = 1200;
 
+  let radius = 0;
+  let zOffset = 0;
   let rotation = 0;
   let focused = -1;
+
+  function readCardSize() {
+    return parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--card")) || 150;
+  }
 
   const cardEls = cards.map(function (chapter, i) {
     const el = document.createElement(chapter.status === "ready" ? "a" : "div");
     el.className = "card" + (chapter.status === "ready" ? "" : " card--ghost");
     el.dataset.slot = String(i);
-    el.style.transform = "rotateY(" + R.slotAngle(i, slots) + "deg) translateZ(" + radius + "px)";
 
     if (chapter.status === "ready") {
       el.href = chapter.href;
@@ -47,6 +51,26 @@
     ringEl.appendChild(el);
     return el;
   });
+
+  /*
+   * Recompute everything that depends on viewport size. The mobile breakpoint
+   * changes --card, which changes the radius, which changes the fit scale — so
+   * this has to run as a unit on every resize, not just once at startup.
+   */
+  function layout() {
+    const cardSize = readCardSize();
+    radius = R.ringRadius(slots, cardSize);
+    zOffset = R.ringZOffset(radius, cardSize);
+
+    cardEls.forEach(function (el, i) {
+      el.style.transform = "rotateY(" + R.slotAngle(i, slots) + "deg) translateZ(" + radius + "px)";
+    });
+
+    const width = R.projectedRingWidth(slots, cardSize, PERSPECTIVE);
+    stage.style.transform = "scale(" + R.fitScale(width, window.innerWidth) + ")";
+
+    setRotation(rotation);
+  }
 
   function setRotation(deg) {
     rotation = deg;
@@ -104,7 +128,9 @@
   });
 
   // Start on the chapter we came back from, or the first one.
-  setRotation(rotationForSlot(R.focusIndexFromSearch(window.location.search, cards)));
+  rotation = rotationForSlot(R.focusIndexFromSearch(window.location.search, cards));
+  layout();
+  window.addEventListener("resize", layout);
 
   // ---- interaction ----------------------------------------------------------
 
