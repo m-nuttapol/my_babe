@@ -108,20 +108,22 @@ takes a state object and draws it, and it owns no rules.
 | Gravity | 1800 px/s² |
 | Jump velocity | −620 px/s (≈107px high, ≈0.69s airborne) |
 | Standing hitbox | 44 × 72 |
-| Sliding hitbox | 60 × 36 |
+| Sliding hitbox | 60 × 34 |
 | Slide duration | 0.5s, cannot start while airborne |
 
 ### Obstacles
 
 - **JUMP** obstacles: 46 wide × 54 high, sitting on the ground — 📦 box, 🐱 sleeping
   cat, ☕ spilled coffee, 🧸 toy.
-- **SLIDE** obstacles: hang with a 40px gap beneath — 🎈 balloon, Happy Birthday
-  banner, tree branch.
+- **SLIDE** obstacles: 70 tall, hanging with a **48px gap** beneath — 🎈 balloon,
+  Happy Birthday banner, tree branch.
 - **🎁 fake obstacles**: drawn at jump-obstacle size and position, but they are
   collectibles worth one heart. No collision.
 
-A 107px jump clears a 54px obstacle comfortably, and a 36px slide hitbox fits the
-40px gap. Both have margin on purpose: this is a gift, not a precision platformer.
+A 107px jump clears a 54px obstacle comfortably, and a 34px slide hitbox passes
+under a 48px gap with 14px to spare. Both have margin on purpose: this is a gift,
+not a precision platformer. (An earlier draft said 40px gap against a 36px hitbox,
+which leaves only 4px — precise enough to feel unfair, so both numbers moved.)
 
 ### HUD
 
