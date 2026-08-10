@@ -224,10 +224,12 @@
 
   root.Scenes.showCutscene(function () {
     root.Audio2.unlock();
-    root.Scenes.showCountdown(function () {
-      root.Scenes.hide();
-      state.scene = "run";
-      root.Audio2.startChiptune();
+    root.Scenes.showControls(function () {
+      root.Scenes.showCountdown(function () {
+        root.Scenes.hide();
+        state.scene = "run";
+        root.Audio2.startChiptune();
+      });
     });
   });
 

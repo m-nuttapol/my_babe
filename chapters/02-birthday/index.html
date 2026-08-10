@@ -38,6 +38,16 @@
       letter-spacing: .16em; text-transform: uppercase; cursor: pointer; }
     .tap:hover { background: rgba(255,255,255,.14); }
 
+    .controls { display: flex; flex-direction: column; gap: 14px; margin: 18px 0 4px; }
+    .ctrl { display: flex; align-items: center; gap: 14px; text-align: left;
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+      border-radius: 16px; padding: 14px 16px; }
+    .ctrl .key { flex: 0 0 auto; min-width: 84px; text-align: center; padding: 9px 10px;
+      border-radius: 11px; background: rgba(255,255,255,.16);
+      font: 800 13px/1.25 ui-sans-serif, system-ui; letter-spacing: .06em; }
+    .ctrl .what { font: 600 14px/1.45 ui-sans-serif, system-ui; }
+    .ctrl .what b { display: block; font-size: 16px; margin-bottom: 2px; }
+
     .letter { position: fixed; inset: 0; z-index: 70; overflow-y: auto;
       background: linear-gradient(180deg, #fff6f8 0%, #ffeaf0 100%); color: #2a2530;
       padding: 40px 22px 80px; }

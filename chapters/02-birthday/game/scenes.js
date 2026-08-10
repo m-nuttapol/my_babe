@@ -70,6 +70,30 @@
     ], onDone);
   }
 
+  /*
+   * Shown once, between the cutscene and the countdown. Hold-to-slide is not a
+   * convention anyone can guess, so it gets said in words before it is needed.
+   *
+   * Note this does NOT use playBeats: it waits for an explicit button rather than
+   * a tap anywhere, so a leftover tap from the cutscene cannot skip past it.
+   */
+  function showControls(onDone) {
+    show(
+      '<p class="line">How to catch him</p>' +
+      '<div class="controls">' +
+        '<div class="ctrl"><div class="key">⬆<br>TAP</div>' +
+          '<div class="what"><b>JUMP</b>over things on the ground</div></div>' +
+        '<div class="ctrl"><div class="key">⬇<br>HOLD</div>' +
+          '<div class="what"><b>SLIDE</b>hold it down to stay low, release to stand up</div></div>' +
+      "</div>" +
+      '<button class="tap" id="gotIt">Got it</button>'
+    );
+    document.getElementById("gotIt").addEventListener("click", function () {
+      hide();
+      onDone();
+    });
+  }
+
   function showCatch(onOpen) {
     playBeats([
       { html: '<p class="line">Okay okay! You win \u{1F602}</p>', ms: 2000 },
@@ -126,6 +150,7 @@
     hide: hide,
     playBeats: playBeats,
     showCutscene: showCutscene,
+    showControls: showControls,
     showCountdown: showCountdown,
     showCatch: showCatch,
     showLetter: showLetter,

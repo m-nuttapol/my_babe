@@ -87,6 +87,28 @@
     return entity.kind === "gift" ? "\u{1F381}" : "❤️";
   }
 
+  /*
+   * A floating control hint above an obstacle. Fades in as it approaches and out
+   * as it passes, so it is loudest exactly when she needs to act on it.
+   *
+   * save/restore around globalAlpha matters: without it the alpha leaks into
+   * everything drawn afterwards and fades the whole scene.
+   */
+  function drawHint(ctx, sx, topY, text) {
+    const distance = Math.abs(sx - C.PLAYER_X);
+    const alpha = Math.max(0, Math.min(1, 1 - (distance - 90) / 320));
+    if (alpha <= 0) return;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "800 15px ui-sans-serif, system-ui";
+    ctx.fillStyle = "#ffe27a";
+    ctx.fillText(text, sx, topY - 26);
+    ctx.restore();
+  }
+
   function drawEntities(ctx, state) {
     const from = state.worldX - C.PLAYER_X - 80;
     const to = state.worldX + C.CANVAS_W;
@@ -104,6 +126,8 @@
         const box = root.Rules.jumpObstacleBox(sx);
         ctx.font = "44px system-ui";
         ctx.fillText(emojiFor(e), sx, box.y + box.h / 2);
+        // Gifts never get a hint - that would give away the disguise.
+        if (e.hint && e.kind === "jump") drawHint(ctx, sx, box.y, "⬆ TAP");
       } else if (e.kind === "slide") {
         /*
          * The collision box runs to the ceiling so a jump cannot clear it, but the
@@ -119,6 +143,7 @@
         ctx.stroke();
         ctx.font = "52px system-ui";
         ctx.fillText(emojiFor(e), sx, artY);
+        if (e.hint) drawHint(ctx, sx, artY - C.SLIDE_OBS_H / 2, "⬇ HOLD");
       } else {
         if (state.collectedIds.has(id)) continue;
         ctx.font = "30px system-ui";
