@@ -11,8 +11,9 @@
   "use strict";
 
   const MIN_SLOTS = 6;
-  // Adjacent cards must not touch: leave 15% of a card width between centres.
-  const CARD_GAP_FACTOR = 1.15;
+  // Centre-to-centre spacing as a multiple of card width. 5/3 makes a 6-slot ring
+  // of 150px cards land at radius 250 — the spacing in the approved mockup.
+  const CARD_GAP_FACTOR = 5 / 3;
 
   function normalizeChapters(raw) {
     if (!Array.isArray(raw)) return [];
@@ -47,6 +48,19 @@
     const n = Math.max(3, slots);
     // Invert chord = 2R sin(pi/n) so the gap between neighbours is honoured.
     return (cardSize * CARD_GAP_FACTOR) / (2 * Math.sin(Math.PI / n));
+  }
+
+  /*
+   * How far to push the whole ring away from the viewer.
+   *
+   * Cards sit at translateZ(+radius), so without this the front card gets closer
+   * to the camera every time the ring grows — at 20 slots the radius is ~800 and
+   * a perspective of 1200 magnifies it about 3x. Offsetting by the difference
+   * from the reference (smallest) ring keeps the front card the same size at
+   * every ring size, matching the approved 6-slot framing.
+   */
+  function ringZOffset(radius, cardSize) {
+    return radius - ringRadius(MIN_SLOTS, cardSize);
   }
 
   function padToSlots(chapters, slots) {
@@ -94,6 +108,7 @@
     padToSlots: padToSlots,
     ringSlots: ringSlots,
     ringRadius: ringRadius,
+    ringZOffset: ringZOffset,
     slotAngle: slotAngle,
     nearestSlotIndex: nearestSlotIndex,
     snapRotation: snapRotation,

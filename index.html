@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Chapters</title>
+  <link rel="stylesheet" href="shared/base.css" />
+</head>
+<body>
+  <main class="hub">
+    <p class="hub-hint" id="hint">drag to spin &middot; click a card to enter</p>
+
+    <div class="stage" id="stage">
+      <div class="ring" id="ring"></div>
+    </div>
+
+    <div class="focus">
+      <p class="focus-num" id="focusNum"></p>
+      <h1 class="focus-name" id="focusName"></h1>
+      <p class="focus-sub" id="focusSub"></p>
+      <a class="focus-enter" id="focusEnter" href="#">Enter</a>
+    </div>
+  </main>
+
+  <div class="fade" id="fade"></div>
+
+  <script src="chapters.js"></script>
+  <script src="shared/ring.js"></script>
+  <script src="shared/hub.js"></script>
+</body>
+</html>

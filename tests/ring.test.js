@@ -72,6 +72,34 @@ test("ringRadius grows with slot count so cards never overlap", () => {
   }
 });
 
+test("ringZOffset keeps the front card the same size at every ring size", () => {
+  const PERSPECTIVE = 1200;
+  const frontScale = (slots, cardSize) => {
+    const r = Ring.ringRadius(slots, cardSize);
+    const z = r - Ring.ringZOffset(r, cardSize); // front card's final depth
+    return PERSPECTIVE / (PERSPECTIVE - z);
+  };
+  const reference = frontScale(6, 150);
+  for (const slots of [6, 8, 12, 20, 30]) {
+    assert.ok(
+      Math.abs(frontScale(slots, 150) - reference) < 1e-9,
+      `slots=${slots} front scale ${frontScale(slots, 150)} != ${reference}`
+    );
+  }
+  // and the front card must never reach the camera plane
+  for (const slots of [6, 12, 30]) {
+    const r = Ring.ringRadius(slots, 150);
+    assert.ok(r - Ring.ringZOffset(r, 150) < PERSPECTIVE, `slots=${slots} front card at/behind camera`);
+  }
+});
+
+test("ringZOffset is zero for the smallest ring", () => {
+  const r = Ring.ringRadius(6, 150);
+  assert.equal(Ring.ringZOffset(r, 150), 0);
+  const rMobile = Ring.ringRadius(6, 108);
+  assert.equal(Ring.ringZOffset(rMobile, 108), 0);
+});
+
 test("padToSlots fills the remainder with numbered ghosts", () => {
   const chapters = Ring.normalizeChapters([{ id: "01-valentine", status: "ready" }]);
   const padded = Ring.padToSlots(chapters, 6);
