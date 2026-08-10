@@ -5,7 +5,7 @@ const C = R.C;
 
 function runFrames(p, n, dt, intent) {
   let s = p;
-  for (let i = 0; i < n; i++) s = R.stepPlayer(s, dt, intent || { jump: false, slide: false });
+  for (let i = 0; i < n; i++) s = R.stepPlayer(s, dt, intent || { jump: false, slideHeld: false });
   return s;
 }
 
@@ -20,16 +20,16 @@ test("a new player stands on the ground, not jumping or sliding", () => {
 test("stepPlayer does not mutate its input", () => {
   const p = R.newPlayer();
   const copy = JSON.parse(JSON.stringify(p));
-  R.stepPlayer(p, 1 / 60, { jump: true, slide: false });
+  R.stepPlayer(p, 1 / 60, { jump: true, slideHeld: false });
   assert.deepEqual(p, copy);
 });
 
 test("a jump rises high enough to clear a jump obstacle and lands again", () => {
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slide: false });
+  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slideHeld: false });
   assert.equal(p.onGround, false);
   let highest = p.y;
   for (let i = 0; i < 200 && !p.onGround; i++) {
-    p = R.stepPlayer(p, 1 / 60, { jump: false, slide: false });
+    p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false });
     highest = Math.min(highest, p.y);
   }
   const rise = C.GROUND_Y - highest;
@@ -39,31 +39,98 @@ test("a jump rises high enough to clear a jump obstacle and lands again", () => 
   assert.equal(p.vy, 0);
 });
 
-test("jump airtime is about 0.69s", () => {
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slide: false });
+test("jump airtime matches the constants rather than a hardcoded number", () => {
+  const expected = (2 * -C.JUMP_V) / C.GRAVITY;
+  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slideHeld: false });
   let t = 1 / 60;
-  while (!p.onGround && t < 5) { p = R.stepPlayer(p, 1 / 60, { jump: false, slide: false }); t += 1 / 60; }
-  assert.ok(Math.abs(t - 0.69) < 0.06, `airtime ${t.toFixed(3)}s should be ~0.69s`);
+  while (!p.onGround && t < 5) { p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false }); t += 1 / 60; }
+  assert.ok(Math.abs(t - expected) < 0.06, `airtime ${t.toFixed(3)}s should be ~${expected.toFixed(3)}s`);
+});
+
+/*
+ * The floatier jump peaks above the hanging artwork, so without a ceiling-height
+ * collision box she could jump over slide obstacles and never need to slide at
+ * all — deleting half the game's vocabulary.
+ */
+test("a jump can NEVER clear a hanging obstacle - sliding is the only answer", () => {
+  const obs = R.slideObstacleBox(C.PLAYER_X);
+  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slideHeld: false });
+  let everClear = false;
+  for (let i = 0; i < 300 && !p.onGround; i++) {
+    p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false });
+    if (!R.boxesOverlap(R.playerBox(p), obs)) everClear = true;
+  }
+  assert.equal(everClear, false, "she jumped over a hanging obstacle - sliding became optional");
+});
+
+test("the hanging obstacle's artwork sits above the gap she slides through", () => {
+  const artY = R.slideObstacleArtY();
+  assert.ok(artY < C.GROUND_Y - C.SLIDE_GAP, "artwork must not hang into the slide gap");
+  assert.ok(artY > 0, "artwork must be on screen");
 });
 
 test("holding jump in mid-air does not double-jump", () => {
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slide: false });
+  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slideHeld: false });
   const firstVy = p.vy;
-  p = R.stepPlayer(p, 1 / 60, { jump: true, slide: false });
+  p = R.stepPlayer(p, 1 / 60, { jump: true, slideHeld: false });
   assert.ok(p.vy > firstVy, "vy must be decaying toward the ground, not reset by a held jump");
 });
 
-test("sliding lasts SLIDE_DURATION then ends", () => {
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slide: true });
+
+
+test("a held slide keeps going well past the old fixed duration", () => {
+  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
   assert.equal(p.sliding, true);
-  p = runFrames(p, Math.ceil(C.SLIDE_DURATION * 60) + 2, 1 / 60);
+  // 2 seconds of holding - far longer than any fixed duration would have allowed
+  for (let i = 0; i < 120; i++) p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: true });
+  assert.equal(p.sliding, true, "holding must not time out");
+});
+
+test("releasing ends the slide", () => {
+  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
+  for (let i = 0; i < 40; i++) p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: true });
+  assert.equal(p.sliding, true);
+  p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false });
+  assert.equal(p.sliding, false, "release must stand her up");
+});
+
+test("a one-frame tap still slides for SLIDE_MIN_TIME", () => {
+  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
+  // released immediately afterwards
+  p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false });
+  assert.equal(p.sliding, true, "a tap must not flicker for one frame");
+
+  let t = 2 / 60;
+  while (p.sliding && t < 2) { p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false }); t += 1 / 60; }
+  assert.ok(t >= C.SLIDE_MIN_TIME, `tap slide lasted ${t.toFixed(3)}s, expected >= ${C.SLIDE_MIN_TIME}`);
+  assert.ok(t < C.SLIDE_MIN_TIME + 0.1, `tap slide overran to ${t.toFixed(3)}s`);
+});
+
+test("jump cancels a held slide, so holding SLIDE never traps her", () => {
+  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
+  for (let i = 0; i < 30; i++) p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: true });
+  assert.equal(p.sliding, true);
+  p = R.stepPlayer(p, 1 / 60, { jump: true, slideHeld: true });
+  assert.equal(p.sliding, false, "jump must win over a held slide");
+  assert.equal(p.onGround, false);
+});
+
+test("a slide cannot start in mid-air, even while held", () => {
+  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slideHeld: false });
+  assert.equal(p.onGround, false);
+  p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: true });
   assert.equal(p.sliding, false);
 });
 
-test("a slide cannot start in mid-air", () => {
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slide: false });
-  p = R.stepPlayer(p, 1 / 60, { jump: false, slide: true });
-  assert.equal(p.sliding, false);
+test("a slide held across an obstacle never collides with it", () => {
+  // Simulate the obstacle sweeping past while she holds the button down.
+  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
+  let hit = false;
+  for (let dx = 200; dx > -200; dx -= 4) {
+    p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: true });
+    if (R.boxesOverlap(R.playerBox(p), R.slideObstacleBox(C.PLAYER_X + dx))) hit = true;
+  }
+  assert.equal(hit, false, "holding slide through a slide obstacle must be safe");
 });
 
 test("the standing hitbox sits on the ground and is STAND_W by STAND_H", () => {
@@ -74,7 +141,7 @@ test("the standing hitbox sits on the ground and is STAND_W by STAND_H", () => {
 });
 
 test("the sliding hitbox is shorter and wider", () => {
-  const p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slide: true });
+  const p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
   const b = R.playerBox(p);
   assert.equal(b.h, C.SLIDE_H);
   assert.equal(b.w, C.SLIDE_W);
@@ -94,10 +161,10 @@ test("running into a jump obstacle collides; jumping over it does not", () => {
   const obs = R.jumpObstacleBox(C.PLAYER_X);
   assert.equal(R.boxesOverlap(R.playerBox(R.newPlayer()), obs), true, "standing must hit it");
 
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slide: false });
+  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slideHeld: false });
   let cleared = false;
   for (let i = 0; i < 200 && !p.onGround; i++) {
-    p = R.stepPlayer(p, 1 / 60, { jump: false, slide: false });
+    p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false });
     if (!R.boxesOverlap(R.playerBox(p), obs)) cleared = true;
   }
   assert.ok(cleared, "at the top of a jump she must be clear of the obstacle");
@@ -107,13 +174,13 @@ test("a slide obstacle hits a standing player and misses a sliding one", () => {
   const obs = R.slideObstacleBox(C.PLAYER_X);
   assert.equal(R.boxesOverlap(R.playerBox(R.newPlayer()), obs), true, "standing must hit it");
 
-  const sliding = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slide: true });
+  const sliding = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
   assert.equal(R.boxesOverlap(R.playerBox(sliding), obs), false, "sliding must pass under");
 });
 
 test("the sliding player clears a slide obstacle by a forgiving margin", () => {
   const obs = R.slideObstacleBox(C.PLAYER_X);
-  const sliding = R.playerBox(R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slide: true }));
+  const sliding = R.playerBox(R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true }));
   const margin = sliding.y - (obs.y + obs.h);
   assert.ok(margin >= 10, `only ${margin}px of slide clearance - too precise for a gift`);
 });
@@ -136,10 +203,6 @@ function jumpWindowMs(speed) {
   return ((earliest - latest) / speed) * 1000;
 }
 
-function slideWindowMs(speed) {
-  const half = (C.SLIDE_W + C.SLIDE_OBS_W) / 2;
-  return ((C.SLIDE_DURATION * speed - 2 * half) / speed) * 1000;
-}
 
 test("the jump timing window is humane at every speed in the level", () => {
   for (const s of [C.SPEED_START, 320, 380, C.SPEED_END, C.SPEED_FINAL]) {
@@ -148,20 +211,13 @@ test("the jump timing window is humane at every speed in the level", () => {
   }
 });
 
-test("the slide timing window is humane at every speed in the level", () => {
-  for (const s of [C.SPEED_START, 320, 380, C.SPEED_END, C.SPEED_FINAL]) {
-    const ms = slideWindowMs(s);
-    assert.ok(ms >= MIN_WINDOW_MS, `at ${s}px/s a slide allows only ${ms.toFixed(0)}ms`);
-  }
-});
 
 test("the tightest window is at the start, where she is still learning", () => {
   assert.ok(jumpWindowMs(C.SPEED_START) < jumpWindowMs(C.SPEED_FINAL));
-  assert.ok(slideWindowMs(C.SPEED_START) < slideWindowMs(C.SPEED_FINAL));
 });
 
 test("sliding does not sneak her under a ground obstacle", () => {
-  const sliding = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slide: true });
+  const sliding = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
   assert.equal(
     R.boxesOverlap(R.playerBox(sliding), R.jumpObstacleBox(C.PLAYER_X)),
     true,
@@ -282,10 +338,10 @@ test("a low heart is collected just by running; a high one needs a jump", () => 
   assert.equal(R.boxesOverlap(standing, low), true, "low hearts should be free");
   assert.equal(R.boxesOverlap(standing, high), false, "high hearts must require a jump");
 
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slide: false });
+  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slideHeld: false });
   let reached = false;
   for (let i = 0; i < 200 && !p.onGround; i++) {
-    p = R.stepPlayer(p, 1 / 60, { jump: false, slide: false });
+    p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false });
     if (R.boxesOverlap(R.playerBox(p), high)) reached = true;
   }
   assert.ok(reached, "a jump must be able to reach a high heart");

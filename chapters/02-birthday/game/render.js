@@ -105,16 +105,20 @@
         ctx.font = "44px system-ui";
         ctx.fillText(emojiFor(e), sx, box.y + box.h / 2);
       } else if (e.kind === "slide") {
-        const box = root.Rules.slideObstacleBox(sx);
-        // A line to the ceiling makes it read as hanging, not floating.
+        /*
+         * The collision box runs to the ceiling so a jump cannot clear it, but the
+         * artwork hangs just above the gap. Draw a tether the full height so the
+         * hitbox is honest about where it is.
+         */
+        const artY = root.Rules.slideObstacleArtY();
         ctx.strokeStyle = "rgba(255,255,255,.25)";
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(sx, 0);
-        ctx.lineTo(sx, box.y + 10);
+        ctx.lineTo(sx, artY);
         ctx.stroke();
         ctx.font = "52px system-ui";
-        ctx.fillText(emojiFor(e), sx, box.y + box.h / 2);
+        ctx.fillText(emojiFor(e), sx, artY);
       } else {
         if (state.collectedIds.has(id)) continue;
         ctx.font = "30px system-ui";

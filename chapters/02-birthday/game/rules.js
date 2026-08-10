@@ -18,22 +18,42 @@
     CANVAS_H: 540,
     GROUND_Y: 430,
     PLAYER_X: 260,
-    LEVEL_LENGTH: 39600,
+    /*
+     * 33700, down from 39600. The speed curve below was slowed to make the
+     * chapter easier, which would otherwise have stretched the run from ~118s to
+     * ~139s. This holds it at ~118s.
+     */
+    LEVEL_LENGTH: 33700,
 
-    GRAVITY: 1800,
-    JUMP_V: -620,
+    /*
+     * A floatier jump than the first build (was 1800 / -620).
+     *
+     * Slowing the speed curve to make the chapter easier made JUMPING harder,
+     * which is counter-intuitive: the timing window is
+     * `speed * (airtime - 2*timeToClear) - 2*halfOverlap`, so at a lower speed she
+     * covers less ground during the same airtime and the obstacle sits inside her
+     * hitbox for longer. At 210px/s the old numbers gave a 56ms window.
+     *
+     * Lower gravity and a slightly softer launch stretch the airtime to 0.857s,
+     * which puts the window back to 224ms at the opening speed.
+     */
+    GRAVITY: 1400,
+    JUMP_V: -600,
 
     STAND_W: 44,
     STAND_H: 72,
     SLIDE_W: 60,
     SLIDE_H: 34,
     /*
-     * 0.75s, not the 0.5s originally specced. At the level's opening speed of
-     * 260px/s a 0.5s slide covers 130px against a 112px collision zone, leaving
-     * a 69ms window to press — tighter than the jump's and tighter than human
-     * timing. 0.75s gives ~320ms there. See the timing-window test.
+     * Sliding is HELD, not timed: it lasts as long as the button is down. This
+     * removes the timing problem a fixed duration created — at the opening speed
+     * a 0.5s slide gave only a 69ms window to press, and even a widened 0.75s
+     * one still made the press moment the challenge.
+     *
+     * The minimum exists so a quick tap produces a visible slide instead of a
+     * one-frame flicker.
      */
-    SLIDE_DURATION: 0.75,
+    SLIDE_MIN_TIME: 0.25,
 
     JUMP_OBS_W: 46,
     JUMP_OBS_H: 54,
@@ -49,9 +69,11 @@
     STUMBLE_SPEED_MULT: 0.55,
     STUMBLE_GAP_BONUS: 60,
 
-    SPEED_START: 260,
-    SPEED_END: 420,
-    SPEED_FINAL: 520,
+    // Slowed from 260/420/520 after playtesting: the game was too hard, and a
+    // gentler opening gives her room to learn the controls.
+    SPEED_START: 210,
+    SPEED_END: 340,
+    SPEED_FINAL: 430,
     GAP_START: 380,
     GAP_END: 90,
 
@@ -73,10 +95,12 @@
       sliding: p.sliding, slideT: p.slideT, stumbleT: p.stumbleT,
     };
 
-    // A slide only starts from the ground, and never while already sliding.
-    if (intent && intent.slide && n.onGround && !n.sliding) {
+    // Slide is held: it starts on the ground while the button is down, and lasts
+    // until released. slideT counts UP, and exists only to enforce the minimum so
+    // a tap does not flicker for a single frame.
+    if (intent && intent.slideHeld && n.onGround && !n.sliding) {
       n.sliding = true;
-      n.slideT = C.SLIDE_DURATION;
+      n.slideT = 0;
     }
 
     // Jumping cancels a slide; you cannot jump in the air (no double jump).
@@ -97,9 +121,16 @@
       }
     }
 
+    // Airborne means not sliding, whatever the button is doing.
+    if (!n.onGround && n.sliding) { n.sliding = false; n.slideT = 0; }
+
     if (n.sliding) {
-      n.slideT -= dt;
-      if (n.slideT <= 0) { n.sliding = false; n.slideT = 0; }
+      n.slideT += dt;
+      const released = !(intent && intent.slideHeld);
+      if (released && n.slideT >= C.SLIDE_MIN_TIME) {
+        n.sliding = false;
+        n.slideT = 0;
+      }
     }
 
     if (n.stumbleT > 0) {
@@ -130,14 +161,27 @@
     };
   }
 
+  /*
+   * A hanging obstacle's collision box runs all the way to the ceiling, not just
+   * the height of its artwork.
+   *
+   * The floatier jump peaks with her whole body above the artwork, so without
+   * this she could jump over a hanging obstacle and never learn to slide — which
+   * would quietly delete half the game's vocabulary. It also matches what the
+   * drawing already implies, since the thing is tethered to the top of the screen.
+   */
   function slideObstacleBox(screenX) {
-    const bottom = C.GROUND_Y - C.SLIDE_GAP;
     return {
       x: screenX - C.SLIDE_OBS_W / 2,
-      y: bottom - C.SLIDE_OBS_H,
+      y: 0,
       w: C.SLIDE_OBS_W,
-      h: C.SLIDE_OBS_H,
+      h: C.GROUND_Y - C.SLIDE_GAP,
     };
+  }
+
+  // Where the artwork sits, as opposed to where the collision box is.
+  function slideObstacleArtY() {
+    return C.GROUND_Y - C.SLIDE_GAP - C.SLIDE_OBS_H / 2;
   }
 
   function collectibleBox(screenX, y) {
@@ -214,6 +258,7 @@
     boxesOverlap: boxesOverlap,
     jumpObstacleBox: jumpObstacleBox,
     slideObstacleBox: slideObstacleBox,
+    slideObstacleArtY: slideObstacleArtY,
     collectibleBox: collectibleBox,
     speedAt: speedAt,
     gapAt: gapAt,
