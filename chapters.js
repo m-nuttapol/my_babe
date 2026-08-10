@@ -20,7 +20,12 @@ window.CHAPTERS = [
     subtitle: "the one where she said no nineteen times",
     status: "ready",
   },
-  { id: "02", status: "soon" },
+  {
+    id: "02-birthday",
+    title: "Catch Me If You Can",
+    subtitle: "the one where you stole your own present",
+    status: "ready",
+  },
   { id: "03", status: "soon" },
   { id: "04", status: "soon" },
   { id: "05", status: "soon" },
