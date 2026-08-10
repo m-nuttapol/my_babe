@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chapter</title>
+  <style>
+    /* This chapter owns its own look. Nothing here is shared with the hub
+       except the back link below, so you can style it however you want. */
+    html, body { margin: 0; height: 100%; background: #08080c; color: #fafafa;
+      font-family: ui-sans-serif, system-ui, sans-serif; }
+    .chapter-back { position: fixed; top: 14px; left: 14px; z-index: 9999;
+      padding: 8px 14px; border-radius: 999px; background: rgba(0,0,0,.55);
+      color: #fff; text-decoration: none; font: 500 12px/1 ui-sans-serif, system-ui;
+      letter-spacing: .1em; text-transform: uppercase; backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,.25); }
+    .chapter-back:hover { background: rgba(0,0,0,.8); }
+    .stage { display: flex; align-items: center; justify-content: center;
+      height: 100%; text-align: center; padding: 24px; }
+  </style>
+</head>
+<body>
+  <!-- Replace CHAPTER_ID with this folder's name, e.g. 02-birthday -->
+  <a class="chapter-back" href="../../index.html?from=CHAPTER_ID"
+     aria-label="back to chapters">&#8592; chapters</a>
+
+  <div class="stage">
+    <div>
+      <h1>New chapter</h1>
+      <p>Put your media in <code>assets/</code> and build the scene here.</p>
+    </div>
+  </div>
+
+  <script>
+    // Reference media through this constant so the folder can move later:
+    //   <img src="..."> becomes  img.src = ASSETS + "photo.jpg"
+    const ASSETS = "assets/";
+  </script>
+</body>
+</html>
