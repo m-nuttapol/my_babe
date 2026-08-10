@@ -402,6 +402,16 @@
 </head>
 
 <body>
+  <a class="chapter-back" href="../../index.html?from=01-valentine"
+     aria-label="back to chapters">&#8592; chapters</a>
+  <style>
+    .chapter-back{position:fixed;top:14px;left:14px;z-index:9999;padding:8px 14px;
+      border-radius:999px;background:rgba(0,0,0,.55);color:#fff;text-decoration:none;
+      font:500 12px/1 ui-sans-serif,system-ui;letter-spacing:.1em;text-transform:uppercase;
+      backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.25)}
+    .chapter-back:hover{background:rgba(0,0,0,.8)}
+  </style>
+
   <div class="stage">
     <div class="stage-inner">
       <!-- Left: boy -->
@@ -426,7 +436,7 @@
           </div>
 
           <div class="img-wrap">
-            <img src="boy.jpg" alt="boy" />
+            <img src="assets/boy.jpg" alt="boy" />
           </div>
 
           <div class="label" id="hpText">HP: 20/20</div>
@@ -437,7 +447,7 @@
       <div class="center-col">
         <!-- Cat panel (red box area) -->
         <div class="cat-panel" id="catPanel" aria-live="polite">
-          <img id="catPanelImg" src="cat1.jpg" alt="cat" />
+          <img id="catPanelImg" src="assets/cat1.jpg" alt="cat" />
           <div class="txt">
             <div class="title" id="catPanelTitle">จิ๋วว รับไม่ด้ายย</div>
             <div class="line" id="catPanelLine"></div>
@@ -477,7 +487,7 @@
           </div>
 
           <div class="img-wrap">
-            <img src="girl.jpg" alt="girl" />
+            <img src="assets/girl.jpg" alt="girl" />
           </div>
 
           <div class="label">
@@ -496,14 +506,14 @@
 
   <!-- ===== Audio elements (put files in same folder) =====
        song1.mp3, song2.mp3, song3.mp3, Boom1.mp3, Boom2.mp3 -->
-  <audio id="song1" src="song1.mp3" preload="auto" loop></audio>
-  <audio id="song2" src="song2.mp3" preload="auto" loop></audio>
-  <audio id="song3" src="song3.mp3" preload="auto" loop></audio>
+  <audio id="song1" src="assets/song1.mp3" preload="auto" loop></audio>
+  <audio id="song2" src="assets/song2.mp3" preload="auto" loop></audio>
+  <audio id="song3" src="assets/song3.mp3" preload="auto" loop></audio>
 
-  <audio id="boom1" src="boom1.mp3" preload="auto"></audio>
-  <audio id="boom2" src="boom2.mp3" preload="auto"></audio>
+  <audio id="boom1" src="assets/boom1.mp3" preload="auto"></audio>
+  <audio id="boom2" src="assets/boom2.mp3" preload="auto"></audio>
   
-  <audio id="tingSound" src="ting.mp3" preload="auto"></audio>
+  <audio id="tingSound" src="assets/ting.mp3" preload="auto"></audio>
 
 
   <!-- small helper button for mobile autoplay rules -->
@@ -515,6 +525,10 @@
 <script>
   const MAX_HP = 20;
 
+  // All media for this chapter lives in ./assets/. Every asset reference in this
+  // file goes through ASSETS so the folder can move without a hunt-and-peck edit.
+  const ASSETS = "assets/";
+
   // =========================
   // ✅ Audio engine (DOM-independent)
   // =========================
@@ -522,13 +536,13 @@
     unlocked: false,
     currentKey: null,
     song: new Audio(),
-    boom1: new Audio("boom1.mp3"),
-    boom2: new Audio("boom2.mp3"),
-    pop: new Audio("pop.mp3"),
+    boom1: new Audio(ASSETS + "boom1.mp3"),
+    boom2: new Audio(ASSETS + "boom2.mp3"),
+    pop: new Audio(ASSETS + "pop.mp3"),
     songs: {
-      song1: "song1.mp3",
-      song2: "song2.mp3",
-      song3: "song3.mp3",
+      song1: ASSETS + "song1.mp3",
+      song2: ASSETS + "song2.mp3",
+      song3: ASSETS + "song3.mp3",
     }
   };
 
@@ -707,7 +721,7 @@
       ? "กดไรอ่ะ แอบมองอยู่นะจ๊ะ"
       : "จิ๋วว รับไม่ด้ายย";
 
-    if (catPanelImg) catPanelImg.src = `cat${catIdx}.jpg`;
+    if (catPanelImg) catPanelImg.src = `${ASSETS}cat${catIdx}.jpg`;
     if (catPanelTitle) catPanelTitle.textContent = title;
     if (catPanelLine) catPanelLine.textContent = msg;
 
@@ -1040,7 +1054,7 @@
       const delay = idx * 0.06;
       return `
         <div class="cell" style="grid-column:${c};grid-row:${r};animation-delay:${delay}s">
-          <img src="${idx+1}.jpg" alt="p${idx+1}">
+          <img src="${ASSETS}${idx+1}.jpg" alt="p${idx+1}">
         </div>
       `;
     }).join("");
@@ -1122,7 +1136,7 @@ function showFinalPage(){
         ไปเปิดตู้เย็นสิคะะะ 🤍✨
       </div>
 
-      <img src="couple.jpg" alt="valentine"
+      <img src="assets/couple.jpg" alt="valentine"
            style="
             max-width:min(1100px,96vw); 
             max-height:86vh; 
@@ -1131,7 +1145,7 @@ function showFinalPage(){
             box-shadow:0 22px 60px rgba(0,0,0,0.55);
            " />
 
-      <audio id="tingSound" src="ting.mp3" preload="auto"></audio>
+      <audio id="tingSound" src="assets/ting.mp3" preload="auto"></audio>
 
     </div>
   `;
