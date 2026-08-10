@@ -88,6 +88,32 @@ test("checkpoints are at 20/40/60/80 percent", () => {
   );
 });
 
+test("the first HINT_COUNT obstacles of each kind carry a hint", () => {
+  const jumps = obstacles.filter((o) => o.kind === "jump");
+  const slides = obstacles.filter((o) => o.kind === "slide");
+
+  assert.equal(jumps.filter((o) => o.hint).length, L.HINT_COUNT);
+  assert.equal(slides.filter((o) => o.hint).length, L.HINT_COUNT);
+
+  // and they must be the EARLIEST ones - a hint on obstacle 40 teaches nothing
+  for (let i = 0; i < jumps.length; i++) {
+    assert.equal(!!jumps[i].hint, i < L.HINT_COUNT, `jump obstacle ${i} hint flag wrong`);
+  }
+  for (let i = 0; i < slides.length; i++) {
+    assert.equal(!!slides[i].hint, i < L.HINT_COUNT, `slide obstacle ${i} hint flag wrong`);
+  }
+});
+
+test("hints appear early enough in the level to be a tutorial", () => {
+  const hinted = obstacles.filter((o) => o.hint);
+  const lastHintProgress = Math.max(...hinted.map((o) => o.x / C.LEVEL_LENGTH));
+  assert.ok(lastHintProgress < 0.35, `last hint at ${(lastHintProgress * 100).toFixed(0)}% is too late to teach`);
+});
+
+test("collectibles never carry hints", () => {
+  for (const c of collectibles) assert.ok(!c.hint, "a collectible must not be flagged as a hint");
+});
+
 test("entitiesInWindow returns only what is inside the window", () => {
   const es = [{ x: 10, kind: "jump" }, { x: 200, kind: "slide" }, { x: 5000, kind: "jump" }];
   assert.deepEqual(L.entitiesInWindow(es, 0, 300).map((e) => e.x), [10, 200]);

@@ -18,6 +18,10 @@
 
   const C = Rules.C;
 
+  // How many of each obstacle kind get a floating control hint. Four is enough to
+  // teach a control and few enough to stop feeling like hand-holding.
+  const HINT_COUNT = 4;
+
   // Airtime of a full jump, from the same constants the physics uses.
   const AIRTIME = (2 * -C.JUMP_V) / C.GRAVITY;
 
@@ -56,10 +60,15 @@
       obstacleXs.push(next);
       x = next;
     }
+    const kindSeen = { jump: 0, slide: 0 };
     for (let i = 0; i < obstacleXs.length; i++) {
       // Alternate-ish so neither kind clusters, but not strictly predictable.
       const kind = rand() < 0.55 ? "jump" : "slide";
-      entities.push({ x: obstacleXs[i], kind: kind });
+      const entity = { x: obstacleXs[i], kind: kind };
+      // The first few of each kind teach the control that clears them.
+      if (kindSeen[kind] < HINT_COUNT) entity.hint = true;
+      kindSeen[kind]++;
+      entities.push(entity);
     }
 
     // --- collectibles ------------------------------------------------------
@@ -116,5 +125,6 @@
     buildLevel: buildLevel,
     entitiesInWindow: entitiesInWindow,
     minSpacingAt: minSpacingAt,
+    HINT_COUNT: HINT_COUNT,
   };
 });
