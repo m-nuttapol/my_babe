@@ -1,0 +1,68 @@
+/*
+ * Two display faces, split by script: Pinyon Script for Latin, iannnnn-DOG for
+ * Thai. Both are scoped with `unicode-range`, so a heading mixing English and
+ * Thai picks the right face per glyph automatically and neither stack needs to
+ * know which language a title happens to be in.
+ *
+ * Pinyon Script is self-hosted rather than linked from Google's CDN: the page
+ * then works with no network and makes no third-party request. Taken from Google
+ * Fonts (the canonical source for it) under the SIL Open Font License — see
+ * fonts/OFL.txt.
+ */
+@font-face {
+  font-family: "Pinyon Script";
+  src: url("fonts/pinyon-script-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+                 U+02DC, U+2000-206F, U+2122, U+2212, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Pinyon Script";
+  src: url("fonts/pinyon-script-latin-ext.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+                 U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+                 U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/*
+ * Thai display face: iannnnn-DOG (หมา), from f0nt.com. Converted from the
+ * released ttf to woff2, which halved it — 115KB to 46KB per weight.
+ *
+ * Two static weights, declared separately. NOT one face with `font-weight: 400
+ * 700`: that syntax describes a variable font's axis, and claiming a range a
+ * static file does not have makes the browser synthesise the weights it was
+ * promised instead of using the real Bold that shipped alongside.
+ *
+ * `unicode-range` covers Latin AND Thai, because iannnnn-DOG ships all 95 Basic
+ * Latin glyphs — so a line like "กด spacebar" is one typeface throughout instead
+ * of Thai in a handwritten face and the English word in the system sans.
+ *
+ * The hub's title is unaffected: Pinyon Script sits BEFORE iannnnn-DOG in
+ * --serif, so it still claims Latin there. Order in the stack decides, not this.
+ *
+ * The released zip also has a Light weight, not shipped here — nothing on the
+ * site asks for 300, and it would be a third file downloaded for nothing.
+ */
+@font-face {
+  font-family: "iannnnn-DOG";
+  src: url("fonts/iannnnn-DOG-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0020-00FF, U+0E00-0E7F;
+}
+
+@font-face {
+  font-family: "iannnnn-DOG";
+  src: url("fonts/iannnnn-DOG-bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0020-00FF, U+0E00-0E7F;
+}

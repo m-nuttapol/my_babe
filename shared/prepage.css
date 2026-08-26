@@ -1,0 +1,95 @@
+/*
+ * The prepage: a cover in front of the ring hub. Uses base.css's palette and
+ * type, so it is the same page, not a second theme.
+ */
+.prepage {
+  /* Its own palette, pulled from background/default.jpg. Scoped here rather than
+     in base.css so the ring hub behind it keeps its cyan theme untouched. */
+  /* Pale sky, to match background/predefault.jpg — this is what shows before the
+     image loads and behind it at aspect ratios it cannot cover. */
+  --pre-bg: #e6f0f7;
+  --pre-ink: #5f3542;
+  --pre-brand: #f7c9d3;
+  --pre-brand-alt: #a9ccc7;
+
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--pre-bg);
+  transition: opacity 0.6s ease;
+}
+.prepage[hidden] { display: none; }
+.prepage[data-going="true"] { opacity: 0; pointer-events: none; }
+
+.prepage-art {
+  position: absolute;
+  inset: 0;
+  background-image: url("background/predefault.jpg");
+  background-size: cover;
+  background-position: center;
+}
+/*
+ * A light veil behind the title only. Much weaker than a full wash: the centre
+ * of this art is already pale cloud, so the mauve type reads against it without
+ * help, and washing it out would hide the illustration the page is here to show.
+ */
+.prepage-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 46% 34% at 50% 46%,
+              rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.34) 55%,
+              rgba(255, 255, 255, 0) 100%);
+}
+
+.prepage-cats { position: absolute; inset: 0; pointer-events: none; }
+
+.prepage-cat {
+  position: absolute;
+  width: var(--size, 96px);
+  height: auto;
+  filter: drop-shadow(0 8px 18px rgba(95, 53, 66, 0.22));
+  animation: prepage-drift var(--dur, 4s) ease-in-out var(--delay, 0s) infinite;
+}
+
+@keyframes prepage-drift {
+  0%   { transform: translate3d(0, 0, 0) rotate(var(--tilt, 0deg)); }
+  50%  { transform: translate3d(0, var(--rise, -12px), 0) rotate(calc(var(--tilt, 0deg) + var(--spin, 4deg))); }
+  100% { transform: translate3d(0, 0, 0) rotate(var(--tilt, 0deg)); }
+}
+
+.prepage-inner { position: relative; z-index: 1; text-align: center; padding: 24px; }
+
+.prepage-title {
+  margin: 0 0 30px;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(44px, 11vw, 92px);
+  line-height: 1.1;
+  color: var(--pre-ink);
+}
+
+.prepage-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 16px 36px;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: clamp(15px, 3.6vw, 20px);
+  font-weight: 700;
+  color: var(--pre-ink);
+  background: var(--pre-brand);
+  box-shadow: 0 10px 28px rgba(95, 53, 66, 0.22);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.prepage-btn:hover { transform: scale(1.04); background: var(--pre-brand-alt); }
+.prepage-btn:focus-visible { outline: 2px solid var(--pre-ink); outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .prepage-cat { animation: none; }
+  .prepage, .prepage-btn { transition-duration: 1ms; }
+}

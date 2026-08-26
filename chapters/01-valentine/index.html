@@ -1,0 +1,1256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Be My Valentine 💘</title>
+
+<!-- The type, shared with the hub. This chapter is almost entirely Thai, so it is
+     the page that most needed it: the whole conversation was setting in whatever
+     system face the device happened to have. -->
+<link rel="stylesheet" href="../../shared/fonts.css" />
+
+<style>
+  :root{
+    --bg: #f7d7e0;
+    --card: #e6e6e6;
+    --pink: #ff2e88;
+    --shadow: 0 18px 40px rgba(0,0,0,0.12);
+    /*
+     * iannnnn-DOG first, then the old stack untouched behind it. fonts.css scopes
+     * the face to U+0020-00FF and U+0E00-0E7F, so it claims the Thai and the
+     * English both — which is the point here, since the two are mixed inside single
+     * chat bubbles and a per-glyph switch between two faces looked like a bug.
+     */
+    --th: "iannnnn-DOG", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    min-height:100svh;
+    background: var(--bg);
+    font-family: var(--th);
+    overflow:hidden;
+    transition:0.25s;
+  }
+
+  /* ===== Stage layout (centered + safe width) ===== */
+  .stage{
+    position:fixed;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 16px;
+  }
+  .stage-inner{
+    width: min(1240px, 100%);
+    display:grid;
+    grid-template-columns: minmax(260px, 1fr) minmax(320px, 560px) minmax(260px, 1fr);
+    align-items:center;
+    justify-items:center;
+    gap: 14px;
+  }
+
+  .side{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    width:100%;
+  }
+
+  .person{
+    width: min(380px, 100%);
+    background: rgba(255,255,255,0.55);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 22px;
+    padding: 14px;
+    box-shadow: var(--shadow);
+    transition: opacity .25s ease, filter .25s ease, transform .25s ease;
+  }
+
+  .img-wrap img{
+    width: 100%;
+    height: clamp(260px, 44vh, 420px);
+    object-fit: cover;
+    border-radius: 16px;
+    display:block;
+  }
+
+  .label{
+    margin-top: 8px;
+    font-size: .92rem;
+    font-weight: 900;
+    opacity: .85;
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    gap: 10px;
+  }
+
+  /* male fades out with HP */
+  .faint-1{ opacity:.90; filter: blur(.2px); }
+  .faint-2{ opacity:.80; filter: blur(.4px); }
+  .faint-3{ opacity:.70; filter: blur(.6px); }
+  .faint-4{ opacity:.60; filter: blur(.8px); }
+  .faint-5{ opacity:.50; filter: blur(1px); }
+  .faint-6{ opacity:.40; filter: blur(1.2px); }
+  .faint-7{ opacity:.30; filter: blur(1.4px); transform: scale(.99); }
+  .faint-8{ opacity:.20; filter: blur(1.8px); transform: scale(.98); }
+  .gone { opacity:0; pointer-events:none; transform: scale(.96); filter: blur(3px); }
+
+  /* ===== Center card ===== */
+  .card{
+    width: 100%;
+    background: var(--card);
+    padding: 18px 18px;
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+    text-align:center;
+    position:relative;
+  }
+
+  h1{
+    margin:0 0 12px;
+    font-size: clamp(20px, 2.4vw, 36px);
+    font-weight: 900;
+  }
+
+  /* ===== HUD (compact, clean) ===== */
+  .hud{
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.76), rgba(255,255,255,0.50));
+    border: 1px solid rgba(0,0,0,0.06);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 12px 26px rgba(0,0,0,0.10);
+    position: relative;
+    overflow:hidden;
+  }
+  .hud::before{
+    content:"";
+    position:absolute;
+    inset:-40px;
+    background: radial-gradient(60% 70% at 20% 10%, rgba(255,46,136,0.18), transparent 55%);
+    pointer-events:none;
+  }
+  .hud-top{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    gap: 4px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+  .hud-name{
+    font-weight: 1000;
+    font-size: .95rem;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+  }
+  .hud-title{
+    font-weight: 850;
+    font-size: .82rem;
+    opacity: .78;
+    line-height: 1.15;
+  }
+  .hud-section{
+    position:relative;
+    margin-top: 10px;
+  }
+  .hud-head{
+    font-weight: 1000;
+    font-size: .80rem;
+    letter-spacing: .6px;
+    opacity: .85;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  .hud-list{
+    list-style: none;
+    padding:0;
+    margin:0;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .hud-list li{
+    font-weight: 850;
+    font-size: .82rem;
+    padding: 9px 10px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(0,0,0,0.05);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .hud-list li::before{
+    content:"✦";
+    opacity:.7;
+  }
+
+  .hp{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:6px;
+    margin: 10px 0 16px;
+  }
+  .hp span{
+    font-size: 16px;
+    line-height: 1;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.10));
+    transition: transform .12s ease, opacity .12s ease;
+  }
+  .hp .lost{ opacity:.18; transform: scale(.92); }
+
+  .row{
+    display:flex;
+    gap:12px;
+    justify-content:center;
+    align-items:center;
+    margin-top: 4px;
+  }
+
+  button{
+    border:0;
+    padding:12px 22px;
+    font-size:16px;
+    border-radius:999px;
+    cursor:pointer;
+    transition: transform .12s ease, box-shadow .12s ease, opacity .15s ease;
+    box-shadow:0 12px 22px rgba(0,0,0,0.12);
+    user-select:none;
+  }
+
+  #yes{
+    background: var(--pink);
+    color:#fff;
+    font-weight:900;
+    transform-origin: center;
+    position: relative;
+    z-index: 3;
+  }
+
+  #no{
+    background:#efefef;
+    color:#111;
+    font-weight:800;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Shake */
+  .shake{ animation:shake 0.25s; }
+  @keyframes shake{
+    0%{transform:translateX(0)}
+    25%{transform:translateX(-7px)}
+    50%{transform:translateX(7px)}
+    75%{transform:translateX(-7px)}
+    100%{transform:translateX(0)}
+  }
+
+  /* Hearts pop */
+  .heart{
+    position: fixed;
+    font-size: 18px;
+    pointer-events:none;
+    animation: floatUp 1.05s ease-out forwards;
+    opacity: .9;
+    z-index: 99999;
+  }
+  @keyframes floatUp{
+    0%{ transform: translateY(0) scale(1); opacity: .95; }
+    100%{ transform: translateY(-90px) scale(1.4); opacity: 0; }
+  }
+
+  /* ===== LOADING overlay ===== */
+  .final-overlay{
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255,46,136,0.55) 0%, rgba(0,0,0,0.92) 80%);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:18px;
+    z-index: 9997;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity .25s ease;
+  }
+  .final-overlay.show{
+    opacity:1;
+    pointer-events:auto;
+  }
+  .loading-text{
+    color:white;
+    font-weight:900;
+    font-size: clamp(16px,3.5vw,34px);
+    letter-spacing:1px;
+    text-align:center;
+    padding: 0 14px;
+  }
+  .heart-beat{
+    font-size: 60px;
+    animation: beat .8s infinite;
+  }
+  @keyframes beat{
+    0%{transform:scale(1)}
+    50%{transform:scale(1.2)}
+    100%{transform:scale(1)}
+  }
+
+  /* ===== Mobile / small screens ===== */
+  @media (max-width: 980px){
+    body{ overflow:auto; }
+    .stage{ position:relative; inset:auto; min-height:100svh; }
+    .stage-inner{
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto auto;
+      width: min(720px, 100%);
+    }
+    .card{ width: min(560px, 100%); }
+  }
+
+  /* ===== Audio helper (small button) ===== */
+  .audio-fab{
+    position: fixed;
+    right: 14px;
+    bottom: 14px;
+    z-index: 10000;
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .audio-btn{
+    border:0;
+    border-radius:999px;
+    padding:10px 14px;
+    font-weight:900;
+    cursor:pointer;
+    background: rgba(255,255,255,0.88);
+    box-shadow: 0 14px 26px rgba(0,0,0,0.18);
+  }
+  .audio-note{
+    font-weight: 900;
+    font-size: 12px;
+    opacity: .7;
+    background: rgba(0,0,0,0.10);
+    padding: 6px 10px;
+    border-radius: 999px;
+  }
+
+  /* ===== NEW: Center column wrapper ===== */
+  .center-col{
+    width: 100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap: 14px;
+  }
+
+  /* ===== NEW: Cat Panel (red box area) ===== */
+  .cat-panel{
+    width: 100%;
+    background: rgba(255,255,255,0.62);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 22px;
+    padding: 14px;
+    box-shadow: var(--shadow);
+    display:flex;
+    align-items:center;
+    gap: 14px;
+
+    opacity:0;
+    transform: translateY(6px);
+    pointer-events:none;
+    transition: .18s ease;
+  }
+  .cat-panel.show{
+    opacity:1;
+    transform: translateY(0);
+  }
+  .cat-panel img{
+    width: 110px;
+    height: 110px;
+    border-radius: 18px;
+    object-fit: cover;
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 12px 20px rgba(0,0,0,0.12);
+    flex: 0 0 auto;
+  }
+  .cat-panel .txt{
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap: 6px;
+  }
+  .cat-panel .title{
+    font-weight: 1000;
+    font-size: 1.05rem;
+    line-height: 1.1;
+  }
+  .cat-panel .line{
+    font-weight: 900;
+    font-size: 1rem;
+    opacity: .85;
+    line-height: 1.2;
+  }
+
+  @media (max-width: 520px){
+    .cat-panel img{ width: 88px; height: 88px; border-radius: 16px; }
+    .cat-panel{ padding: 12px; border-radius: 18px; }
+  }
+</style>
+</head>
+
+<body>
+  <a class="chapter-back" href="../../"
+     onclick="sessionStorage.setItem('mybabe:returnFrom','01-valentine')"
+     aria-label="back to chapters">&#8592; chapters</a>
+  <style>
+    .chapter-back{position:fixed;top:14px;left:14px;z-index:9999;padding:8px 14px;
+      border-radius:999px;background:rgba(0,0,0,.55);color:#fff;text-decoration:none;
+      font:500 12px/1 ui-sans-serif,system-ui;letter-spacing:.1em;text-transform:uppercase;
+      backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.25)}
+    .chapter-back:hover{background:rgba(0,0,0,.8)}
+  </style>
+
+  <div class="stage">
+    <div class="stage-inner">
+      <!-- Left: boy -->
+      <div class="side">
+        <div class="person" id="boyCard">
+          <div class="hud">
+            <div class="hud-top">
+              <div class="hud-name">M</div>
+              <div class="hud-title">The Trainer • Household MVP • Wi-Fi Fixer • 9-to-5 Warrior • Yap God • Main Character</div>
+            </div>
+
+            <div class="hud-section">
+              <div class="hud-head">Achievements</div>
+              <ul class="hud-list" id="boyAch">
+                <li>Try-to-survival mode always ON</li>
+                <li>Upgraded to high-end version… but still has bugs</li>
+                <li>Bottleneck on RAM whenever a new idea appears</li>
+                <!-- <li>Doesn’t know what’s going on… still great performance</li> -->
+                <li>No idea what this guy’s thinking (even him)</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="img-wrap">
+            <img src="assets/boy.jpg" alt="boy" />
+          </div>
+
+          <div class="label" id="hpText">HP: 20/20</div>
+        </div>
+      </div>
+
+      <!-- Center -->
+      <div class="center-col">
+        <!-- Cat panel (red box area) -->
+        <div class="cat-panel" id="catPanel" aria-live="polite">
+          <img id="catPanelImg" src="assets/cat1.jpg" alt="cat" />
+          <div class="txt">
+            <div class="title" id="catPanelTitle">จิ๋วว รับไม่ด้ายย</div>
+            <div class="line" id="catPanelLine"></div>
+          </div>
+        </div>
+
+        <div class="card" id="card">
+          <h1>Will you be my Valentine? 💘</h1>
+
+          <div class="hp" id="hpBar" aria-label="HP hearts"></div>
+
+          <div class="row" id="row">
+            <button id="yes">YES 💖</button>
+            <button id="no">NO ❌</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: girl -->
+      <div class="side">
+        <div class="person" id="girlCard">
+          <div class="hud">
+            <div class="hud-top">
+              <div class="hud-name">PAC</div>
+              <div class="hud-title">Introvert Rare Pokémon • Limited Edition • 1 in 8 Billion Spawn Rate</div>
+            </div>
+
+            <div class="hud-section">
+              <div class="hud-head">Achievements</div>
+              <ul class="hud-list">
+                <li>Silent Mode Master (but deadly cute)</li>
+                <li>Spawned once, broke the server</li>
+                <li>Ultra-rare “Okay” = Legendary approval</li>
+                <li>Eye-contact crit damage +999</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="img-wrap">
+            <img src="assets/girl.jpg" alt="girl" />
+          </div>
+
+          <div class="label">
+            <span style="opacity:.75;">💞</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading overlay -->
+  <div class="final-overlay" id="finalOverlay">
+    <div class="heart-beat">💖</div>
+    <div class="loading-text" id="loadingText">...loading</div>
+  </div>
+
+  <!-- ===== Audio elements (put files in same folder) =====
+       song1.mp3, song2.mp3, song3.mp3, Boom1.mp3, Boom2.mp3 -->
+  <audio id="song1" src="assets/song1.mp3" preload="auto" loop></audio>
+  <audio id="song2" src="assets/song2.mp3" preload="auto" loop></audio>
+  <audio id="song3" src="assets/song3.mp3" preload="auto" loop></audio>
+
+  <audio id="boom1" src="assets/boom1.mp3" preload="auto"></audio>
+  <audio id="boom2" src="assets/boom2.mp3" preload="auto"></audio>
+  
+  <audio id="tingSound" src="assets/ting.mp3" preload="auto"></audio>
+
+
+  <!-- small helper button for mobile autoplay rules -->
+  <div class="audio-fab" id="audioFab">
+    <button class="audio-btn" id="audioBtn">🔊 Start Music</button>
+    <div class="audio-note">tap once</div>
+  </div>
+
+<script>
+  const MAX_HP = 20;
+
+  // All media for this chapter lives in ./assets/. Every asset reference in this
+  // file goes through ASSETS so the folder can move without a hunt-and-peck edit.
+  const ASSETS = "assets/";
+
+  // =========================
+  // ✅ Audio engine (DOM-independent)
+  // =========================
+  const audioState = {
+    unlocked: false,
+    currentKey: null,
+    song: new Audio(),
+    boom1: new Audio(ASSETS + "boom1.mp3"),
+    boom2: new Audio(ASSETS + "boom2.mp3"),
+    pop: new Audio(ASSETS + "pop.mp3"),
+    songs: {
+      song1: ASSETS + "song1.mp3",
+      song2: ASSETS + "song2.mp3",
+      song3: ASSETS + "song3.mp3",
+    }
+  };
+
+  audioState.song.loop = true;
+  audioState.song.preload = "auto";
+  audioState.song.volume = 0.65;
+
+  audioState.boom1.preload = "auto";
+  audioState.boom2.preload = "auto";
+  audioState.boom1.volume = 0.95;
+  audioState.boom2.volume = 0.95;
+
+  audioState.pop.preload = "auto";
+  audioState.pop.volume = 0.8;
+
+  function setFabVisible(visible){
+    const fab = document.getElementById("audioFab");
+    if (fab) fab.style.display = visible ? "flex" : "none";
+  }
+
+  async function unlockAudio(){
+    if (audioState.unlocked) return;
+    audioState.unlocked = true;
+
+    try{
+      audioState.song.src = audioState.songs.song1;
+      audioState.song.volume = 0.01;
+      await audioState.song.play();
+      audioState.song.pause();
+      audioState.song.currentTime = 0;
+      audioState.song.volume = 0.65;
+    }catch(e){}
+
+    setFabVisible(false);
+    await playSong("song1");
+  }
+
+  async function playSong(key){
+    if (!audioState.unlocked) return;
+    const url = audioState.songs[key];
+    if (!url) return;
+
+    if (audioState.currentKey === key && !audioState.song.paused) return;
+
+    try{
+      audioState.song.pause();
+      audioState.song.currentTime = 0;
+    }catch(e){}
+
+    audioState.song.src = url;
+    audioState.currentKey = key;
+
+    try{ await audioState.song.play(); }catch(e){}
+  }
+
+  async function fadeOutSong(ms=250){
+    const s = audioState.song;
+    const start = s.volume ?? 0.65;
+    const steps = 14;
+    for (let i=0;i<steps;i++){
+      s.volume = Math.max(0, start * (1 - (i+1)/steps));
+      await new Promise(r=>setTimeout(r, ms/steps));
+    }
+    try{ s.pause(); }catch(e){}
+    s.currentTime = 0;
+    s.volume = start;
+  }
+
+  function waitForEnded(a, fallbackMs){
+    return new Promise(resolve=>{
+      let done = false;
+      const finish = ()=>{
+        if (done) return;
+        done = true;
+        a.removeEventListener("ended", finish);
+        resolve();
+      };
+      a.addEventListener("ended", finish, {once:true});
+      setTimeout(finish, fallbackMs);
+    });
+  }
+
+  function playPop(){
+  if (!audioState.unlocked) return; // กัน autoplay policy
+  try{
+    audioState.pop.pause();
+    audioState.pop.currentTime = 0;
+    audioState.pop.play();
+  }catch(e){}
+}
+
+
+  async function playBoomSequence(){
+    if (!audioState.unlocked) return;
+
+    await fadeOutSong(220);
+
+    try{
+      audioState.boom1.currentTime = 0;
+      await audioState.boom1.play();
+    }catch(e){}
+    await waitForEnded(audioState.boom1, 900);
+
+    try{
+      audioState.boom2.currentTime = 0;
+      await audioState.boom2.play();
+    }catch(e){}
+    await waitForEnded(audioState.boom2, 900);
+  }
+
+  // =========================
+  // Existing UI elements (page 1)
+  // =========================
+  let hp = MAX_HP;
+  let noCount = 0;
+  let fullMode = false;
+
+  const yesBtn = document.getElementById("yes");
+  const noBtn  = document.getElementById("no");
+  const boyCard = document.getElementById("boyCard");
+  const hpText = document.getElementById("hpText");
+  const hpBar = document.getElementById("hpBar");
+
+  // NEW: cat panel refs
+  const catPanel = document.getElementById("catPanel");
+  const catPanelImg = document.getElementById("catPanelImg");
+  const catPanelTitle = document.getElementById("catPanelTitle");
+  const catPanelLine = document.getElementById("catPanelLine");
+
+  const messages = [
+    "อะไรร 😳",
+    "มันไม่ใช่อันนี้อะ 😏",
+    "อันนี้ไม่ได้ 😤",
+    "บางทีอาจจะต้องลองคิดอีกที 🤔",
+    "มือโดนเองใช่ไหม… ใช่ไหม! 😌",
+    "กดผิดแหละ เชื่อดิ 😆",
+    "ระบบไม่รองรับคำว่า No 🚫",
+    "ปุ่ม No กำลังหนีชีวิตอยู่ 🏃",
+    "ยังจะพยายามอีกหรอ 😂",
+    "รับไม่ได้จริงๆ 😾",
+    "No ไม่มีไว้กด มีไว้ให้วิ่ง 😏",
+  ];
+
+  // build hearts
+  const hearts = [];
+  for(let i=0;i<MAX_HP;i++){
+    const s = document.createElement("span");
+    s.textContent = "❤️";
+    hpBar.appendChild(s);
+    hearts.push(s);
+  }
+
+  function renderHP(){
+    hpText.textContent = `HP: ${hp}/${MAX_HP}`;
+    for(let i=0;i<MAX_HP;i++){
+      hearts[i].classList.toggle("lost", i >= hp);
+    }
+
+    boyCard.className = "person";
+    const lostCount = MAX_HP - hp;
+
+    if (hp <= 0){
+      boyCard.classList.add("gone");
+      return;
+    }
+    const faintLevel = Math.min(8, Math.floor(lostCount / 2));
+    if (faintLevel > 0) boyCard.classList.add(`faint-${faintLevel}`);
+  }
+
+  // NEW: show message on cat panel (red box area)
+  function showMessage(customText=null) {
+    const msg = customText ?? messages[Math.floor(Math.random() * messages.length)];
+
+    const catIdx = 1 + Math.floor(Math.random() * 7);
+    const title = (catIdx === 5)
+      ? "กดไรอ่ะ แอบมองอยู่นะจ๊ะ"
+      : "จิ๋วว รับไม่ด้ายย";
+
+    if (catPanelImg) catPanelImg.src = `${ASSETS}cat${catIdx}.jpg`;
+    if (catPanelTitle) catPanelTitle.textContent = title;
+    if (catPanelLine) catPanelLine.textContent = msg;
+
+    if (catPanel){
+      catPanel.classList.add("show");
+      clearTimeout(showMessage._t);
+      showMessage._t = setTimeout(() => catPanel.classList.remove("show"), 1500);
+    }
+  }
+
+  function popHeart(x, y){
+    const h = document.createElement("div");
+    h.className = "heart";
+    h.textContent = ["💖","💘","💕","💗"][Math.floor(Math.random()*4)];
+    h.style.left = (x ?? window.innerWidth/2) + "px";
+    h.style.top  = (y ?? window.innerHeight/2) + "px";
+    document.body.appendChild(h);
+    setTimeout(() => h.remove(), 1100);
+  }
+
+  function ensureNoIsFixed() {
+    if (noBtn.dataset.fixed === "1") return;
+    const r = noBtn.getBoundingClientRect();
+    noBtn.style.position = "fixed";
+    noBtn.style.left = r.left + "px";
+    noBtn.style.top  = r.top  + "px";
+    noBtn.style.transform = "translate(0,0)";
+    noBtn.dataset.fixed = "1";
+  }
+
+  function moveNo() {
+    const bw = Math.max(110, noBtn.offsetWidth);
+    const bh = Math.max(46,  noBtn.offsetHeight);
+    const pad = 10;
+
+    const cardEl = document.getElementById("card");
+    const cardR = cardEl.getBoundingClientRect();
+
+    const SAFE = 44;
+    const blocked = {
+      left: Math.max(0, cardR.left - SAFE),
+      top: Math.max(0, cardR.top - SAFE),
+      right: Math.min(window.innerWidth,  cardR.right + SAFE),
+      bottom: Math.min(window.innerHeight, cardR.bottom + SAFE),
+    };
+
+    const intersectsBlocked = (x, y) => {
+      const r = { left: x, top: y, right: x + bw, bottom: y + bh };
+      return !(
+        r.right < blocked.left ||
+        r.left  > blocked.right ||
+        r.bottom < blocked.top ||
+        r.top  > blocked.bottom
+      );
+    };
+
+    let x = pad, y = pad, tries = 0;
+    const maxTries = 120;
+
+    do {
+      x = pad + Math.random() * (window.innerWidth  - bw - pad*2);
+      y = pad + Math.random() * (window.innerHeight - bh - pad*2);
+      tries++;
+    } while (intersectsBlocked(x, y) && tries < maxTries);
+
+    if (tries >= maxTries) {
+      x = window.innerWidth - bw - pad;
+      y = pad;
+    }
+
+    noBtn.style.left = x + "px";
+    noBtn.style.top  = y + "px";
+  }
+
+  function setYesGrowingVisual() {
+    const scale = Math.min(3.2, 1 + (noCount / MAX_HP) * 2.2);
+    yesBtn.style.transform = `scale(${scale})`;
+  }
+
+  // ✅ 20th NO -> Boom1/Boom2 -> overlay -> page2 + song2
+  async function enterHeartGate(){
+    fullMode = true;
+
+    noBtn.style.opacity = "0";
+    noBtn.style.pointerEvents = "none";
+    setTimeout(() => { if (noBtn) noBtn.remove(); }, 250);
+
+    showMessage("หยุดดื้อได้มั้ย… ตู้มมม 💥");
+
+    await playBoomSequence();
+
+    const overlay = document.getElementById("finalOverlay");
+    const loadingText = document.getElementById("loadingText");
+    loadingText.textContent = "ตู้มมมมมมมมมมมมมมมม..";
+    overlay.classList.add("show");
+
+    setTimeout(async ()=>{
+      overlay.classList.remove("show");
+      await playSong("song2");
+      showHeartChoiceScreen();
+    }, 900);
+  }
+
+  function showHeartChoiceScreen(){
+    document.body.innerHTML = `
+      <style>
+        :root{
+          --cream:#f3dfcf;
+          --tile: clamp(46px, 7.2vw, 96px);
+          --gap: clamp(10px, 1.2vw, 14px);
+        }
+        body{
+          margin:0;
+          min-height:100svh;
+          background: var(--cream);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          flex-direction:column;
+          font-family: var(--th);
+          overflow:hidden;
+        }
+        .wrap{
+          width:min(1020px, 96vw);
+          display:flex;
+          flex-direction:column;
+          align-items:center;
+          justify-content:center;
+          gap: 18px;
+          padding: 18px 12px;
+        }
+
+        .heart-area{
+          width: min(calc(8 * var(--tile) + 7 * var(--gap) + 32px), 96vw);
+          margin: 0 auto;
+          max-width: 96vw;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+        }
+
+        .heart-grid{
+          transform: translateX(calc(-0.5 * (var(--tile) + var(--gap))));
+          display:grid;
+          grid-template-columns: repeat(8, var(--tile));
+          grid-template-rows: repeat(5, var(--tile));
+          gap: var(--gap);
+          padding: 16px;
+          border-radius: 28px;
+          filter: drop-shadow(0 22px 40px rgba(0,0,0,0.20));
+        }
+
+        .cell{
+          width: var(--tile);
+          height: var(--tile);
+          border-radius: 18px;
+          overflow:hidden;
+          opacity:0;
+          transform: translateY(10px) scale(.96);
+          box-shadow: 0 14px 26px rgba(0,0,0,.22);
+          border: 1px solid rgba(255,255,255,0.12);
+          animation: popIn .55s ease-out forwards;
+          background: rgba(255,255,255,0.22);
+        }
+        .cell img{ width:100%; height:100%; object-fit:cover; display:block; }
+        @keyframes popIn{ to { opacity:1; transform: translateY(0) scale(1); } }
+
+        .caption{
+          width: min(calc(8 * var(--tile) + 7 * var(--gap) + 32px), 96vw);
+          margin: 0 auto;
+          text-align:center;
+          font-weight: 900;
+          font-size: clamp(14px, 2.1vw, 18px);
+          line-height: 1.55;
+          color: rgba(0,0,0,0.78);
+          padding: 0 12px;
+        }
+
+        .cta{
+          width: min(calc(8 * var(--tile) + 7 * var(--gap) + 32px), 96vw);
+          margin: 0 auto;
+          display: flex;
+          justify-content: center;
+        }
+        .yesBtn{
+          border:0;
+          padding: 16px 46px;
+          font-size: clamp(18px, 2.8vw, 28px);
+          border-radius: 999px;
+          cursor:pointer;
+          background:#ff2e88;
+          color:#fff;
+          font-weight: 1000;
+          box-shadow: 0 22px 44px rgba(0,0,0,.20);
+          transition: transform .15s ease;
+        }
+        .yesBtn:hover{ transform: scale(1.06); }
+
+        /* ===== Glitter Snow (Page 2) ===== */
+        .glitter-layer{
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          overflow: hidden;
+          z-index: 99999;
+        }
+
+        .glitter{
+          position: absolute;
+          top: -16px;
+          width: var(--s);
+          height: var(--s);
+          border-radius: 50%;
+          background: radial-gradient(circle at 30% 30%,
+            rgba(255,255,255,1) 0%,
+            rgba(255,255,255,0.65) 35%,
+            rgba(255,255,255,0.10) 70%,
+            rgba(255,255,255,0) 100%);
+          filter: drop-shadow(0 10px 18px rgba(0,0,0,0.18));
+          opacity: var(--o);
+          animation: fall var(--d) linear infinite;
+          transform: translateX(var(--x));
+        }
+
+        .glitter::after{
+          content:"";
+          position:absolute;
+          inset: -40%;
+          border-radius: 50%;
+          background: conic-gradient(
+            from 0deg,
+            rgba(255,255,255,0.0),
+            rgba(255,255,255,0.8),
+            rgba(255,255,255,0.0),
+            rgba(255,255,255,0.8),
+            rgba(255,255,255,0.0)
+          );
+          opacity: .35;
+          animation: twinkle var(--t) ease-in-out infinite;
+        }
+
+        @keyframes fall{
+          0%   { transform: translateX(var(--x)) translateY(-20px) rotate(0deg); }
+          100% { transform: translateX(calc(var(--x) + var(--drift))) translateY(110vh) rotate(360deg); }
+        }
+
+        @keyframes twinkle{
+          0%,100% { transform: rotate(0deg) scale(0.9); opacity: .25; }
+          50%     { transform: rotate(160deg) scale(1.15); opacity: .55; }
+        }
+
+      </style>
+
+      <div class="wrap">
+        <div class="glitter-layer" id="glitterLayer"></div>
+        <div class="heart-area">
+          <div class="heart-grid">
+            ${buildHeart24CellsHTML()}
+          </div>
+        </div>
+
+        <div class="caption">
+          ไปกันต่อนะคะ มาถึงขนาดนี้แล้ว จับมือกันไปทุกๆ ปีเลย 🤍<br>
+          Final Choice Unlocked. Proceed? 🤍
+        </div>
+
+        <div class="cta">
+          <button class="yesBtn" id="heartYes">YES 🤍</button>
+        </div>
+      </div>
+    `;
+
+    function startGlitterSnow(){
+      const layer = document.getElementById("glitterLayer");
+      if (!layer) return;
+
+      // ล้างก่อนกันซ้อน
+      layer.innerHTML = "";
+
+      // ปริมาณกลิตเตอร์ (ปรับได้)
+      const count = 46;
+
+      for(let i=0;i<count;i++){
+        const g = document.createElement("div");
+        g.className = "glitter";
+
+        // สุ่มค่าให้ดูธรรมชาติ
+        const size = 6 + Math.random()*10;         // 6-16px
+        const opacity = 0.35 + Math.random()*0.55; // 0.35-0.9
+        const duration = 6 + Math.random()*8;      // 6-14s
+        const tw = 1.2 + Math.random()*2.6;        // twinkle speed
+        const x = Math.random()*100;               // %
+        const drift = (-40 + Math.random()*80) + "px"; // -40..40px
+
+        g.style.setProperty("--s", size + "px");
+        g.style.setProperty("--o", opacity);
+        g.style.setProperty("--d", duration + "s");
+        g.style.setProperty("--t", tw + "s");
+        g.style.setProperty("--x", x + "vw");
+        g.style.setProperty("--drift", drift);
+
+        // ทำให้ไม่ตกพร้อมกันหมด
+        g.style.animationDelay = (-Math.random()*duration) + "s";
+
+        layer.appendChild(g);
+      }
+    }
+
+    // ✅ เรียกใช้ทันทีเมื่อเข้าหน้า 2
+    startGlitterSnow();
+
+
+    document.getElementById("heartYes").addEventListener("click", async ()=>{
+      await playSong("song3");
+      showFinalPage();
+    });
+  }
+
+  function buildHeart24CellsHTML(){
+    const final24 = [
+      [3,1],[4,1],[6,1],[7,1],
+      [2,2],[3,2],[4,2],[5,2],[6,2],[7,2],[8,2],
+      [2,3],[3,3],[4,3],[5,3],[6,3],[7,3],[8,3],
+      [3,4],[4,4],[5,4],[6,4],[7,4],
+      [5,5]
+    ];
+
+    return final24.map((pos, idx)=>{
+      const [c,r] = pos;
+      const delay = idx * 0.06;
+      return `
+        <div class="cell" style="grid-column:${c};grid-row:${r};animation-delay:${delay}s">
+          <img src="${ASSETS}${idx+1}.jpg" alt="p${idx+1}">
+        </div>
+      `;
+    }).join("");
+  }
+
+function showFinalPage(){
+  document.body.innerHTML = `
+    <style>
+      .glitter-container{
+        position:fixed;
+        inset:0;
+        pointer-events:none;
+        overflow:hidden;
+        z-index:5;
+      }
+
+      .glitter{
+        position:absolute;
+        top:-20px;
+        width:6px;
+        height:6px;
+        background:white;
+        border-radius:50%;
+        opacity:.8;
+        filter: blur(.5px);
+        animation: fall linear forwards;
+      }
+
+      @keyframes fall{
+        to{
+          transform: translateY(110vh) translateX(var(--drift));
+          opacity:0;
+        }
+      }
+    </style>
+
+    <div style="
+      position:fixed; inset:0; background:#000;
+      display:flex; align-items:center; justify-content:center;
+      padding:16px; flex-direction:column;
+    ">
+
+      <!-- Glitter Layer -->
+      <div class="glitter-container" id="glitterLayer"></div>
+
+      <div style="
+        position:fixed; 
+        top:18px; 
+        left:50%; 
+        transform:translateX(-50%);
+        color:#fff; 
+        font-weight:900; 
+        font-size:clamp(18px,3.2vw,34px);
+        text-align:center; 
+        padding:12px 18px; 
+        border-radius:16px;
+        background:rgba(0,0,0,0.45); 
+        backdrop-filter:blur(8px);
+      ">
+       💖 Happy Valentine’s นะคะ
+      </div>
+
+      <div id="fridgeMsg" style="
+        position:fixed;
+        bottom:30px;
+        left:50%;
+        transform:translateX(-50%);
+        color:#fff;
+        font-weight:900;
+        font-size:clamp(16px,2.6vw,26px);
+        text-align:center;
+        padding:14px 20px;
+        border-radius:18px;
+        background:linear-gradient(135deg,#ff2e88,#ff7bb8);
+        box-shadow:0 18px 40px rgba(255,46,136,.45);
+        opacity:0;
+        transition:opacity 1.2s ease, transform 1.2s ease;
+      ">
+        ไปเปิดตู้เย็นสิคะะะ 🤍✨
+      </div>
+
+      <img src="assets/couple.jpg" alt="valentine"
+           style="
+            max-width:min(1100px,96vw); 
+            max-height:86vh; 
+            border-radius:22px;
+            object-fit:contain; 
+            box-shadow:0 22px 60px rgba(0,0,0,0.55);
+           " />
+
+      <audio id="tingSound" src="assets/ting.mp3" preload="auto"></audio>
+
+    </div>
+  `;
+
+  // ✨ Glitter Generator
+  const layer = document.getElementById("glitterLayer");
+
+  setInterval(()=>{
+    const g = document.createElement("div");
+    g.className = "glitter";
+
+    const size = Math.random()*6 + 4;
+    g.style.width = size + "px";
+    g.style.height = size + "px";
+
+    g.style.left = Math.random()*100 + "vw";
+    g.style.animationDuration = (Math.random()*3 + 4) + "s";
+    g.style.setProperty("--drift",(Math.random()*80 - 40) + "px");
+
+    layer.appendChild(g);
+
+    setTimeout(()=>g.remove(),8000);
+  },120);
+
+  // ✨ 2 วิ → ข้อความโผล่
+  setTimeout(()=>{
+    const msg = document.getElementById("fridgeMsg");
+    msg.style.opacity = "1";
+    msg.style.transform = "translateX(-50%) translateY(-6px)";
+  },5000);
+
+  // 🔔 4 วิ → เสียงติ๊ง
+  setTimeout(()=>{
+    const ting = document.getElementById("tingSound");
+    if(ting){
+      ting.volume = 0.9;
+      ting.play().catch(()=>{});
+    }
+  },5000);
+}
+
+
+
+  function onNo(e){
+    if (fullMode) return;
+
+    noCount++;
+    hp = Math.max(0, MAX_HP - noCount);
+    renderHP();
+
+    showMessage();
+    playPop();
+
+    document.body.classList.add("shake");
+    setTimeout(()=>document.body.classList.remove("shake"), 220);
+
+    document.body.style.background = `hsl(${Math.random()*360}, 85%, 90%)`;
+
+    setYesGrowingVisual();
+    ensureNoIsFixed();
+    moveNo();
+
+    popHeart(e?.clientX ?? window.innerWidth/2, e?.clientY ?? window.innerHeight/2);
+
+    if (noCount >= MAX_HP) enterHeartGate();
+  }
+
+  // init
+  renderHP();
+
+  noBtn.addEventListener("mouseenter", onNo);
+  noBtn.addEventListener("mousedown", (e)=>{ e.preventDefault(); onNo(e); });
+  noBtn.addEventListener("click", onNo);
+  noBtn.addEventListener("touchstart", (e)=>{ e.preventDefault(); onNo(e); }, {passive:false});
+
+  yesBtn.addEventListener("click", async ()=>{
+    if (!audioState.unlocked) await unlockAudio(); // เผื่อยังไม่กด Start Music
+    await playSong("song2");
+    showHeartChoiceScreen();
+  });
+
+  window.addEventListener("resize", ()=>{
+    if (noBtn && noBtn.dataset.fixed === "1") moveNo();
+  });
+
+  // ===== hook audio button =====
+  const audioBtn = document.getElementById("audioBtn");
+  if (audioBtn) audioBtn.addEventListener("click", unlockAudio);
+
+  // also unlock on first user interaction (fallback)
+  window.addEventListener("pointerdown", ()=>{ if(!audioState.unlocked) unlockAudio(); }, {once:true});
+</script>
+
+</body>
+</html>
