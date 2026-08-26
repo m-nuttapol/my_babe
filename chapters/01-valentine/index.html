@@ -5,12 +5,24 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Be My Valentine 💘</title>
 
+<!-- The type, shared with the hub. This chapter is almost entirely Thai, so it is
+     the page that most needed it: the whole conversation was setting in whatever
+     system face the device happened to have. -->
+<link rel="stylesheet" href="../../shared/fonts.css" />
+
 <style>
   :root{
     --bg: #f7d7e0;
     --card: #e6e6e6;
     --pink: #ff2e88;
     --shadow: 0 18px 40px rgba(0,0,0,0.12);
+    /*
+     * iannnnn-DOG first, then the old stack untouched behind it. fonts.css scopes
+     * the face to U+0020-00FF and U+0E00-0E7F, so it claims the Thai and the
+     * English both — which is the point here, since the two are mixed inside single
+     * chat bubbles and a per-glyph switch between two faces looked like a bug.
+     */
+    --th: "iannnnn-DOG", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   }
 
   *{ box-sizing:border-box; }
@@ -19,7 +31,7 @@
     margin:0;
     min-height:100svh;
     background: var(--bg);
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    font-family: var(--th);
     overflow:hidden;
     transition:0.25s;
   }
@@ -402,7 +414,8 @@
 </head>
 
 <body>
-  <a class="chapter-back" href="../../index.html?from=01-valentine"
+  <a class="chapter-back" href="../../"
+     onclick="sessionStorage.setItem('mybabe:returnFrom','01-valentine')"
      aria-label="back to chapters">&#8592; chapters</a>
   <style>
     .chapter-back{position:fixed;top:14px;left:14px;z-index:9999;padding:8px 14px;
@@ -841,7 +854,7 @@
           align-items:center;
           justify-content:center;
           flex-direction:column;
-          font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+          font-family: var(--th);
           overflow:hidden;
         }
         .wrap{

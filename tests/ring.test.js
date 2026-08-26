@@ -14,7 +14,19 @@ test("normalizeChapters derives href and cover from id for ready chapters", () =
     subtitle: "hi",
     cover: "chapters/01-valentine/cover.jpg",
     href: "chapters/01-valentine/index.html",
+    backdrop: [
+      "shared/background/01-valentine.jpg",
+      "shared/background/01-valentine.png",
+    ],
+    exit: "#0b1020",
   });
+});
+
+test("a ready chapter keeps its own exit colour when it declares one", () => {
+  const out = Ring.normalizeChapters([
+    { id: "02-bring-m-home", status: "ready", exit: "  #04040a  " },
+  ]);
+  assert.equal(out[0].exit, "#04040a", "and it is trimmed");
 });
 
 test("normalizeChapters strips content from soon chapters", () => {
@@ -28,7 +40,17 @@ test("normalizeChapters strips content from soon chapters", () => {
     subtitle: "",
     cover: null,
     href: null,
+    backdrop: [],
+    exit: null,
   });
+});
+
+test("a soon chapter offers no backdrop, so hovering one cannot leak art", () => {
+  const out = Ring.normalizeChapters([
+    { id: "03", status: "soon", exit: "#ffffff", backdrop: ["leak.jpg"] },
+  ]);
+  assert.deepEqual(out[0].backdrop, []);
+  assert.equal(out[0].exit, null);
 });
 
 test("normalizeChapters defaults missing status to soon", () => {
@@ -52,12 +74,20 @@ test("normalizeChapters returns empty array for non-array input", () => {
   assert.deepEqual(Ring.normalizeChapters({ id: "01" }), []);
 });
 
-test("ringSlots keeps a floor of six so one chapter still reads as a ring", () => {
-  assert.equal(Ring.ringSlots(0), 6);
-  assert.equal(Ring.ringSlots(1), 6);
-  assert.equal(Ring.ringSlots(6), 6);
+test("ringSlots keeps a floor of three so one chapter still reads as a ring", () => {
+  assert.equal(Ring.ringSlots(0), 3);
+  assert.equal(Ring.ringSlots(1), 3);
+  assert.equal(Ring.ringSlots(3), 3);
+  assert.equal(Ring.ringSlots(4), 4);
   assert.equal(Ring.ringSlots(7), 7);
   assert.equal(Ring.ringSlots(20), 20);
+});
+
+test("ringSlots survives junk instead of a count", () => {
+  assert.equal(Ring.ringSlots(NaN), 3);
+  assert.equal(Ring.ringSlots(undefined), 3);
+  assert.equal(Ring.ringSlots(-5), 3);
+  assert.equal(Ring.ringSlots(4.8), 4);
 });
 
 test("ringRadius grows with slot count so cards never overlap", () => {
@@ -94,10 +124,19 @@ test("ringZOffset keeps the front card the same size at every ring size", () => 
 });
 
 test("ringZOffset is zero for the smallest ring", () => {
-  const r = Ring.ringRadius(6, 150);
+  // The reference ring is the MIN_SLOTS one, so that is where the offset
+  // vanishes and the front card sits at its natural scale.
+  const r = Ring.ringRadius(3, 150);
   assert.equal(Ring.ringZOffset(r, 150), 0);
-  const rMobile = Ring.ringRadius(6, 108);
+  const rMobile = Ring.ringRadius(3, 108);
   assert.equal(Ring.ringZOffset(rMobile, 108), 0);
+});
+
+test("ringZOffset is positive for any ring bigger than the smallest", () => {
+  for (const slots of [4, 6, 12, 30]) {
+    const r = Ring.ringRadius(slots, 150);
+    assert.ok(Ring.ringZOffset(r, 150) > 0, `slots=${slots} must push the ring back`);
+  }
 });
 
 test("padToSlots fills the remainder with numbered ghosts", () => {
@@ -219,4 +258,33 @@ test("every slot is reachable as a focus target at any ring size", () => {
       assert.equal(Ring.nearestSlotIndex(-i * step, slots), i, `slots=${slots} i=${i}`);
     }
   }
+});
+
+test("focusIntensity is 1 when the focused card sits dead centre", () => {
+  assert.equal(Ring.focusIntensity(0, 0, 6), 1);
+  assert.equal(Ring.focusIntensity(-120, 2, 6), 1);
+});
+
+test("focusIntensity is 0 at the hand-off point halfway to a neighbour", () => {
+  const slots = 6;
+  const half = 360 / slots / 2;
+  assert.equal(Ring.focusIntensity(half, 0, slots), 0);
+  assert.equal(Ring.focusIntensity(-half, 0, slots), 0);
+});
+
+test("focusIntensity falls off smoothly and symmetrically between the two", () => {
+  const slots = 6;
+  const half = 360 / slots / 2;
+  const near = Ring.focusIntensity(half * 0.25, 0, slots);
+  const far = Ring.focusIntensity(half * 0.75, 0, slots);
+  assert.ok(near > far, `expected closer-to-centre offset to read higher: ${near} vs ${far}`);
+  assert.ok(near > 0 && near < 1, `${near} should be a mid-range fade`);
+  // symmetric: same magnitude offset in either direction reads the same
+  assert.equal(Ring.focusIntensity(half * 0.4, 0, slots), Ring.focusIntensity(-half * 0.4, 0, slots));
+});
+
+test("focusIntensity keeps reading the same card's centring across full turns", () => {
+  const slots = 6;
+  assert.equal(Ring.focusIntensity(360, 0, slots), 1);
+  assert.equal(Ring.focusIntensity(-720, 0, slots), 1);
 });

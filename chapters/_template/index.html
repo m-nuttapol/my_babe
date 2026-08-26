@@ -4,14 +4,27 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Chapter</title>
+  <!-- The type, shared with the hub, so Thai in a chapter is the same face as Thai
+       on the front page. The only stylesheet a chapter takes from shared/. -->
+  <link rel="stylesheet" href="../../shared/fonts.css" />
   <style>
     /* This chapter owns its own look. Nothing here is shared with the hub
-       except the back link below, so you can style it however you want. */
+       except the back link below and the fonts, so style it however you want. */
+    /*
+     * Use var(--th) inside every `font:` shorthand you write. The shorthand resets
+     * font-family, so `font: 600 20px/1.4 system-ui` silently throws iannnnn-DOG
+     * away and your Thai comes out in the system face — the one bug in here that
+     * looks like the fonts simply failed to load.
+     *
+     * Naming it first is safe for English: fonts.css scopes iannnnn-DOG to
+     * U+0E00-0E7F, so Latin falls straight through to ui-sans-serif.
+     */
+    :root { --th: "iannnnn-DOG", ui-sans-serif, system-ui, -apple-system, sans-serif; }
     html, body { margin: 0; height: 100%; background: #08080c; color: #fafafa;
-      font-family: ui-sans-serif, system-ui, sans-serif; }
+      font-family: var(--th); }
     .chapter-back { position: fixed; top: 14px; left: 14px; z-index: 9999;
       padding: 8px 14px; border-radius: 999px; background: rgba(0,0,0,.55);
-      color: #fff; text-decoration: none; font: 500 12px/1 ui-sans-serif, system-ui;
+      color: #fff; text-decoration: none; font: 500 12px/1 var(--th);
       letter-spacing: .1em; text-transform: uppercase; backdrop-filter: blur(6px);
       border: 1px solid rgba(255,255,255,.25); }
     .chapter-back:hover { background: rgba(0,0,0,.8); }

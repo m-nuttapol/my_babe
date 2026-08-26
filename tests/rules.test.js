@@ -1,362 +1,355 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const R = require("../chapters/02-birthday/game/rules.js");
+const R = require("../chapters/02-bring-m-home/game/rules.js");
 const C = R.C;
 
-function runFrames(p, n, dt, intent) {
+const NO_INTENT = { mx: 0, my: 0, aimX: 1, aimY: 0, shoot: false };
+
+function runFrames(p, n, intent, cover, dt) {
   let s = p;
-  for (let i = 0; i < n; i++) s = R.stepPlayer(s, dt, intent || { jump: false, slideHeld: false });
+  for (let i = 0; i < n; i++) s = R.stepPlayer(s, dt || 1 / 120, intent || NO_INTENT, cover || []);
   return s;
 }
 
-test("a new player stands on the ground, not jumping or sliding", () => {
-  const p = R.newPlayer();
-  assert.equal(p.y, C.GROUND_Y);
+function mid() {
+  return R.newPlayer(C.CORRIDOR_W / 2, 0);
+}
+
+// ------------------------------------------------------------------- movement
+
+test("a new player is still, unstaggered and able to fire", () => {
+  const p = mid();
+  assert.equal(p.vx, 0);
   assert.equal(p.vy, 0);
-  assert.equal(p.onGround, true);
-  assert.equal(p.sliding, false);
+  assert.equal(p.staggerT, 0);
+  assert.equal(R.canFire(p), true);
 });
 
 test("stepPlayer does not mutate its input", () => {
-  const p = R.newPlayer();
+  const p = mid();
   const copy = JSON.parse(JSON.stringify(p));
-  R.stepPlayer(p, 1 / 60, { jump: true, slideHeld: false });
+  R.stepPlayer(p, 1 / 120, { mx: 1, my: 1, aimX: 0, aimY: 1, shoot: true }, []);
   assert.deepEqual(p, copy);
 });
 
-test("a jump rises high enough to clear a jump obstacle and lands again", () => {
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slideHeld: false });
-  assert.equal(p.onGround, false);
-  let highest = p.y;
-  for (let i = 0; i < 200 && !p.onGround; i++) {
-    p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false });
-    highest = Math.min(highest, p.y);
-  }
-  const rise = C.GROUND_Y - highest;
-  assert.ok(rise >= C.JUMP_OBS_H + 30, `rise ${rise} must clear a ${C.JUMP_OBS_H}px obstacle with margin`);
-  assert.equal(p.onGround, true, "must come back down");
-  assert.equal(p.y, C.GROUND_Y);
-  assert.equal(p.vy, 0);
+test("a diagonal is not faster than a cardinal", () => {
+  const straight = runFrames(mid(), 240, { mx: 0, my: 1, aimX: 1, aimY: 0 });
+  const diagonal = runFrames(mid(), 240, { mx: 1, my: 1, aimX: 1, aimY: 0 });
+  const a = Math.hypot(straight.vx, straight.vy);
+  const b = Math.hypot(diagonal.vx, diagonal.vy);
+  assert.ok(Math.abs(a - b) < 0.5, `cardinal ${a} vs diagonal ${b} must match`);
 });
 
-test("jump airtime matches the constants rather than a hardcoded number", () => {
-  const expected = (2 * -C.JUMP_V) / C.GRAVITY;
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slideHeld: false });
-  let t = 1 / 60;
-  while (!p.onGround && t < 5) { p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false }); t += 1 / 60; }
-  assert.ok(Math.abs(t - expected) < 0.06, `airtime ${t.toFixed(3)}s should be ~${expected.toFixed(3)}s`);
+test("a half-pushed stick walks at less than full speed", () => {
+  const full = runFrames(mid(), 240, { mx: 0, my: 1, aimX: 1, aimY: 0 });
+  const half = runFrames(mid(), 240, { mx: 0, my: 0.5, aimX: 1, aimY: 0 });
+  assert.ok(Math.hypot(half.vx, half.vy) < Math.hypot(full.vx, full.vy) * 0.75);
 });
 
-/*
- * The floatier jump peaks above the hanging artwork, so without a ceiling-height
- * collision box she could jump over slide obstacles and never need to slide at
- * all — deleting half the game's vocabulary.
- */
-test("a jump can NEVER clear a hanging obstacle - sliding is the only answer", () => {
-  const obs = R.slideObstacleBox(C.PLAYER_X);
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slideHeld: false });
-  let everClear = false;
-  for (let i = 0; i < 300 && !p.onGround; i++) {
-    p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false });
-    if (!R.boxesOverlap(R.playerBox(p), obs)) everClear = true;
-  }
-  assert.equal(everClear, false, "she jumped over a hanging obstacle - sliding became optional");
+test("top speed is capped at MOVE_MAX however long she runs", () => {
+  const p = runFrames(mid(), 1200, { mx: 1, my: 1, aimX: 1, aimY: 0 });
+  assert.ok(Math.hypot(p.vx, p.vy) <= C.MOVE_MAX + 1e-6);
 });
 
-test("the hanging obstacle's artwork sits above the gap she slides through", () => {
-  const artY = R.slideObstacleArtY();
-  assert.ok(artY < C.GROUND_Y - C.SLIDE_GAP, "artwork must not hang into the slide gap");
-  assert.ok(artY > 0, "artwork must be on screen");
+test("she cannot walk into the corridor walls", () => {
+  const left = runFrames(mid(), 600, { mx: -1, my: 0, aimX: 1, aimY: 0 });
+  const right = runFrames(mid(), 600, { mx: 1, my: 0, aimX: 1, aimY: 0 });
+  assert.ok(left.x >= R.corridorMinX() - 1e-6, `${left.x} must stay inside`);
+  assert.ok(right.x <= R.corridorMaxX() + 1e-6, `${right.x} must stay inside`);
 });
 
-test("holding jump in mid-air does not double-jump", () => {
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slideHeld: false });
-  const firstVy = p.vy;
-  p = R.stepPlayer(p, 1 / 60, { jump: true, slideHeld: false });
-  assert.ok(p.vy > firstVy, "vy must be decaying toward the ground, not reset by a held jump");
+test("letting go brings her to a stop", () => {
+  const moving = runFrames(mid(), 240, { mx: 0, my: 1, aimX: 1, aimY: 0 });
+  const stopped = runFrames(moving, 240, NO_INTENT);
+  assert.ok(Math.hypot(stopped.vx, stopped.vy) < 1, "drag must settle her");
 });
 
-
-
-test("a held slide keeps going well past the old fixed duration", () => {
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
-  assert.equal(p.sliding, true);
-  // 2 seconds of holding - far longer than any fixed duration would have allowed
-  for (let i = 0; i < 120; i++) p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: true });
-  assert.equal(p.sliding, true, "holding must not time out");
+test("aim is normalised and survives a frame with no aim input", () => {
+  const p = R.stepPlayer(mid(), 1 / 120, { mx: 0, my: 0, aimX: 3, aimY: 4 }, []);
+  assert.ok(Math.abs(Math.hypot(p.aimX, p.aimY) - 1) < 1e-9);
+  const q = R.stepPlayer(p, 1 / 120, { mx: 0, my: 0, aimX: 0, aimY: 0 }, []);
+  assert.equal(q.aimX, p.aimX);
+  assert.equal(q.aimY, p.aimY);
 });
 
-test("releasing ends the slide", () => {
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
-  for (let i = 0; i < 40; i++) p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: true });
-  assert.equal(p.sliding, true);
-  p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false });
-  assert.equal(p.sliding, false, "release must stand her up");
+// -------------------------------------------------------------------- getting hit
+
+test("a hit staggers her, makes her invulnerable and shoves her away", () => {
+  const p = mid();
+  const hit = R.applyHit(p, p.x, p.y - 20);   // enemy below her
+  assert.equal(hit.staggerT, C.STAGGER_TIME);
+  assert.equal(hit.invulnT, C.INVULN_TIME);
+  assert.ok(hit.vy > 0, "knockback must push away from the enemy");
 });
 
-test("a one-frame tap still slides for SLIDE_MIN_TIME", () => {
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
-  // released immediately afterwards
-  p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false });
-  assert.equal(p.sliding, true, "a tap must not flicker for one frame");
-
-  let t = 2 / 60;
-  while (p.sliding && t < 2) { p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false }); t += 1 / 60; }
-  assert.ok(t >= C.SLIDE_MIN_TIME, `tap slide lasted ${t.toFixed(3)}s, expected >= ${C.SLIDE_MIN_TIME}`);
-  assert.ok(t < C.SLIDE_MIN_TIME + 0.1, `tap slide overran to ${t.toFixed(3)}s`);
+test("invulnerability means one enemy cannot hit twice in a row", () => {
+  const p = mid();
+  const first = R.applyHit(p, p.x + 20, p.y);
+  const second = R.applyHit(first, p.x + 20, p.y);
+  assert.equal(second, first, "a second hit inside invuln must be the same object");
 });
 
-test("jump cancels a held slide, so holding SLIDE never traps her", () => {
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
-  for (let i = 0; i < 30; i++) p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: true });
-  assert.equal(p.sliding, true);
-  p = R.stepPlayer(p, 1 / 60, { jump: true, slideHeld: true });
-  assert.equal(p.sliding, false, "jump must win over a held slide");
-  assert.equal(p.onGround, false);
+test("invulnerability outlasts the stagger, so recovery is never a free hit", () => {
+  assert.ok(C.INVULN_TIME > C.STAGGER_TIME);
 });
 
-test("a slide cannot start in mid-air, even while held", () => {
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slideHeld: false });
-  assert.equal(p.onGround, false);
-  p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: true });
-  assert.equal(p.sliding, false);
+test("movement input is ignored while staggering, but knockback still carries", () => {
+  const staggered = Object.assign({}, mid(), { staggerT: C.STAGGER_TIME, vx: 0, vy: 0 });
+  const pushed = R.stepPlayer(staggered, 1 / 120, { mx: 1, my: 0, aimX: 1, aimY: 0 }, []);
+  assert.equal(pushed.vx, 0, "she gets no thrust while staggered");
+
+  const flung = Object.assign({}, mid(), { staggerT: C.STAGGER_TIME, vx: 200, vy: 0 });
+  assert.ok(R.stepPlayer(flung, 1 / 120, NO_INTENT, []).x > flung.x, "velocity still applies");
 });
 
-test("a slide held across an obstacle never collides with it", () => {
-  // Simulate the obstacle sweeping past while she holds the button down.
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
-  let hit = false;
-  for (let dx = 200; dx > -200; dx -= 4) {
-    p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: true });
-    if (R.boxesOverlap(R.playerBox(p), R.slideObstacleBox(C.PLAYER_X + dx))) hit = true;
-  }
-  assert.equal(hit, false, "holding slide through a slide obstacle must be safe");
+test("she cannot fire while staggered, and the cooldown expires on its own", () => {
+  const staggered = Object.assign({}, mid(), { staggerT: C.STAGGER_TIME });
+  assert.equal(R.canFire(staggered), false);
+  const cooling = Object.assign({}, mid(), { cooldown: C.FIRE_COOLDOWN });
+  assert.equal(R.canFire(cooling), false);
+  const recovered = runFrames(cooling, 240, NO_INTENT);
+  assert.equal(R.canFire(recovered), true);
 });
 
-test("the standing hitbox sits on the ground and is STAND_W by STAND_H", () => {
-  const b = R.playerBox(R.newPlayer());
-  assert.equal(b.w, C.STAND_W);
-  assert.equal(b.h, C.STAND_H);
-  assert.equal(b.y + b.h, C.GROUND_Y, "bottom edge must be the ground");
+// ---------------------------------------------------------------------- bullets
+
+test("a bullet leaves from the muzzle, travels along the aim and expires", () => {
+  const p = Object.assign({}, mid(), { aimX: 0, aimY: 1 });
+  let b = R.newBullet(p);
+  assert.ok(b.y > p.y, "spawns ahead of her, not inside her");
+  const y0 = b.y;
+  for (let i = 0; i < 30; i++) b = R.stepBullet(b, 1 / 120);
+  assert.ok(b.y > y0);
+  assert.equal(R.bulletAlive(b, []), true);
+
+  let old = R.newBullet(p);
+  for (let i = 0; i < 200; i++) old = R.stepBullet(old, 1 / 120);
+  assert.equal(R.bulletAlive(old, []), false, "must die after BULLET_LIFE");
 });
 
-test("the sliding hitbox is shorter and wider", () => {
-  const p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
-  const b = R.playerBox(p);
-  assert.equal(b.h, C.SLIDE_H);
-  assert.equal(b.w, C.SLIDE_W);
-  assert.equal(b.y + b.h, C.GROUND_Y);
+test("cover stops bullets", () => {
+  const b = { x: 400, y: 400, vx: 0, vy: 1, life: 1 };
+  const desk = { x: 350, y: 350, w: 120, h: 100 };
+  assert.equal(R.bulletAlive(b, [desk]), false);
+  assert.equal(R.bulletAlive(b, [{ x: 0, y: 0, w: 50, h: 50 }]), true);
 });
 
-test("boxesOverlap: real overlap, shared edge, and clean miss", () => {
-  const a = { x: 0, y: 0, w: 10, h: 10 };
-  assert.equal(R.boxesOverlap(a, { x: 5, y: 5, w: 10, h: 10 }), true);
-  // touching edges must NOT collide - this is the forgiveness rule
-  assert.equal(R.boxesOverlap(a, { x: 10, y: 0, w: 10, h: 10 }), false);
-  assert.equal(R.boxesOverlap(a, { x: 0, y: 10, w: 10, h: 10 }), false);
-  assert.equal(R.boxesOverlap(a, { x: 20, y: 0, w: 10, h: 10 }), false);
+test("a bullet that leaves the corridor sideways is gone", () => {
+  assert.equal(R.bulletAlive({ x: -5, y: 100, vx: 0, vy: 0, life: 1 }, []), false);
+  assert.equal(R.bulletAlive({ x: C.CORRIDOR_W + 5, y: 100, vx: 0, vy: 0, life: 1 }, []), false);
 });
 
-test("running into a jump obstacle collides; jumping over it does not", () => {
-  const obs = R.jumpObstacleBox(C.PLAYER_X);
-  assert.equal(R.boxesOverlap(R.playerBox(R.newPlayer()), obs), true, "standing must hit it");
+// ---------------------------------------------------------------------- geometry
 
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slideHeld: false });
-  let cleared = false;
-  for (let i = 0; i < 200 && !p.onGround; i++) {
-    p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false });
-    if (!R.boxesOverlap(R.playerBox(p), obs)) cleared = true;
-  }
-  assert.ok(cleared, "at the top of a jump she must be clear of the obstacle");
+test("segIntersectsRect sees a crossing and ignores a miss", () => {
+  const rect = { x: 100, y: 100, w: 100, h: 100 };
+  assert.equal(R.segIntersectsRect(0, 150, 300, 150, rect), true, "straight through");
+  assert.equal(R.segIntersectsRect(0, 50, 300, 50, rect), false, "passes above");
+  assert.equal(R.segIntersectsRect(150, 0, 150, 300, rect), true, "vertical through");
+  assert.equal(R.segIntersectsRect(0, 0, 40, 40, rect), false, "stops short");
 });
 
-test("a slide obstacle hits a standing player and misses a sliding one", () => {
-  const obs = R.slideObstacleBox(C.PLAYER_X);
-  assert.equal(R.boxesOverlap(R.playerBox(R.newPlayer()), obs), true, "standing must hit it");
+test("resolveCircleRect pushes a circle out and reports a clean miss as null", () => {
+  const rect = { x: 100, y: 100, w: 100, h: 100 };
+  assert.equal(R.resolveCircleRect(400, 400, 16, rect), null);
 
-  const sliding = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
-  assert.equal(R.boxesOverlap(R.playerBox(sliding), obs), false, "sliding must pass under");
+  const out = R.resolveCircleRect(95, 150, 16, rect);
+  assert.ok(out && out.x < 100 - 15.9, "pushed clear of the left edge");
+
+  // Dead centre: must still come out, by the nearest wall.
+  const inside = R.resolveCircleRect(150, 190, 16, rect);
+  assert.ok(inside && inside.y > 200, "leaves by the bottom, which is nearest");
 });
 
-test("the sliding player clears a slide obstacle by a forgiving margin", () => {
-  const obs = R.slideObstacleBox(C.PLAYER_X);
-  const sliding = R.playerBox(R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true }));
-  const margin = sliding.y - (obs.y + obs.h);
-  assert.ok(margin >= 10, `only ${margin}px of slide clearance - too precise for a gift`);
-});
-
-/*
- * Fairness invariant. Clearing an obstacle is not about whether the jump is tall
- * enough — it is about how many milliseconds she has to press. Both windows are
- * narrowest at the SLOWEST speed, because a shorter travel distance means less
- * room for error, which is the opposite of the intuition.
- */
-const MIN_WINDOW_MS = 120;
-
-function jumpWindowMs(speed) {
-  const V = -C.JUMP_V;
-  const air = (2 * V) / C.GRAVITY;
-  const tUp = (V - Math.sqrt(V * V - 2 * C.GRAVITY * C.JUMP_OBS_H)) / C.GRAVITY;
-  const half = (C.STAND_W + C.JUMP_OBS_W) / 2;
-  const latest = half + tUp * speed;             // leave the ground by here
-  const earliest = (air - tUp) * speed - half;   // any earlier and she lands on it
-  return ((earliest - latest) / speed) * 1000;
-}
-
-
-test("the jump timing window is humane at every speed in the level", () => {
-  for (const s of [C.SPEED_START, 320, 380, C.SPEED_END, C.SPEED_FINAL]) {
-    const ms = jumpWindowMs(s);
-    assert.ok(ms >= MIN_WINDOW_MS, `at ${s}px/s a jump allows only ${ms.toFixed(0)}ms`);
+test("resolveCover cannot leave her inside any of the boxes", () => {
+  const boxes = [
+    { x: 100, y: 100, w: 120, h: 60 },
+    { x: 180, y: 130, w: 120, h: 60 },
+  ];
+  const out = R.resolveCover(190, 145, C.PLAYER_R, boxes);
+  for (const b of boxes) {
+    assert.equal(R.resolveCircleRect(out.x, out.y, C.PLAYER_R, b), null, "clear of " + JSON.stringify(b));
   }
 });
 
-
-test("the tightest window is at the start, where she is still learning", () => {
-  assert.ok(jumpWindowMs(C.SPEED_START) < jumpWindowMs(C.SPEED_FINAL));
+test("cover is solid: she cannot walk through a desk", () => {
+  const desk = { x: 0, y: 300, w: C.CORRIDOR_W, h: 80 };
+  const p = runFrames(R.newPlayer(C.CORRIDOR_W / 2, 200), 900, { mx: 0, my: 1, aimX: 1, aimY: 0 }, [desk]);
+  assert.ok(p.y < desk.y, `stopped at ${p.y}, must not pass ${desk.y}`);
 });
 
-test("sliding does not sneak her under a ground obstacle", () => {
-  const sliding = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: false, slideHeld: true });
-  assert.equal(
-    R.boxesOverlap(R.playerBox(sliding), R.jumpObstacleBox(C.PLAYER_X)),
-    true,
-    "a longer slide must not become a way to pass through jump obstacles"
-  );
+// ---------------------------------------------------------------------- enemies
+
+test("an enemy hunts her and closes the distance", () => {
+  let e = R.newEnemy("paper", 400, 600);
+  const px = 400;
+  const py = 200;
+  const before = Math.hypot(e.x - px, e.y - py);
+  for (let i = 0; i < 120; i++) e = R.stepEnemy(e, 1 / 120, px, py, []);
+  assert.ok(Math.hypot(e.x - px, e.y - py) < before, "must get closer");
+  assert.ok(e.awareT > 0, "and stay aware while it can see her");
 });
 
-test("speed ramps from SPEED_START to SPEED_END then jumps for the final chase", () => {
-  assert.equal(R.speedAt(0), C.SPEED_START);
-  assert.ok(Math.abs(R.speedAt(C.FINAL_CHASE_AT - 0.001) - C.SPEED_END) < 2);
-  assert.equal(R.speedAt(C.FINAL_CHASE_AT), C.SPEED_FINAL);
-  assert.equal(R.speedAt(1), C.SPEED_FINAL);
+test("an enemy too far away never notices her", () => {
+  const e = R.newEnemy("paper", 400, 400);
+  assert.equal(R.enemySees(e, 400, 400 + C.AGGRO_R + 50, []), false);
+  assert.equal(R.enemySees(e, 400, 400 + C.AGGRO_R - 50, []), true);
 });
 
-test("speed never decreases before the final chase", () => {
+test("a desk between them breaks line of sight", () => {
+  const e = R.newEnemy("shadow", 400, 600);
+  const desk = { x: 300, y: 380, w: 200, h: 70 };
+  assert.equal(R.enemySees(e, 400, 200, []), true, "clear line");
+  assert.equal(R.enemySees(e, 400, 200, [desk]), false, "blocked by the desk");
+});
+
+test("she can break away: awareness lapses after LOSE_SIGHT_TIME behind cover", () => {
+  const desk = { x: 300, y: 380, w: 200, h: 70 };
+  let e = Object.assign(R.newEnemy("shadow", 400, 600), { awareT: C.LOSE_SIGHT_TIME });
+  const steps = Math.ceil((C.LOSE_SIGHT_TIME + 0.1) * 120);
+  for (let i = 0; i < steps; i++) e = R.stepEnemy(e, 1 / 120, 400, 200, [desk]);
+  assert.equal(e.awareT, 0, "gives up and goes back to drifting");
+});
+
+test("enemies are stopped by cover and stay inside the corridor", () => {
+  const desk = { x: 200, y: 380, w: 400, h: 70 };
+  let e = R.newEnemy("paper", 400, 600);
+  for (let i = 0; i < 600; i++) e = R.stepEnemy(e, 1 / 120, 400, 200, [desk]);
+  assert.equal(R.resolveCircleRect(e.x, e.y, R.enemySpec(e).r, desk), null, "never inside the desk");
+  assert.ok(e.x >= C.WALL, "inside the left wall");
+  assert.ok(e.x <= C.CORRIDOR_W - C.WALL, "inside the right wall");
+});
+
+test("a two-hp enemy takes two shots", () => {
+  const shadow = R.newEnemy("shadow", 0, 0);
+  assert.equal(shadow.hp, 2);
+  const once = R.damageEnemy(shadow);
+  assert.equal(once.dead, false);
+  assert.equal(R.damageEnemy(once).dead, true);
+});
+
+test("a one-hp enemy dies to a single shot", () => {
+  assert.equal(R.damageEnemy(R.newEnemy("paper", 0, 0)).dead, true);
+});
+
+test("circlesHit is true on overlap and false on a touch", () => {
+  assert.equal(R.circlesHit(0, 0, 10, 15, 0, 10), true);
+  assert.equal(R.circlesHit(0, 0, 10, 20, 0, 10), false, "exactly touching is not a hit");
+});
+
+// ----------------------------------------------------------------------- vision
+
+test("every memory makes the world brighter, and none makes it darker", () => {
+  const base = 150;
   let prev = -Infinity;
-  for (let p = 0; p < C.FINAL_CHASE_AT; p += 0.01) {
-    const s = R.speedAt(p);
-    assert.ok(s >= prev, `speed dipped at progress ${p}`);
-    prev = s;
+  for (let m = 0; m <= C.MEMORIES_TOTAL; m++) {
+    const r = R.visionRadius(base, m, 0);
+    assert.ok(r > prev, `memory ${m} must not shrink vision (${r} after ${prev})`);
+    prev = r;
   }
 });
 
-test("the run lasts about 120 seconds", () => {
-  let t = 0;
-  const stepPx = 20;
-  for (let x = 0; x < C.LEVEL_LENGTH; x += stepPx) {
-    t += stepPx / R.speedAt(x / C.LEVEL_LENGTH);
+test("zone 3 is finishable with zero memories: vision never drops below the floor", () => {
+  const darkest = R.visionRadius(150, 0, C.VISION_DIM_TIME);
+  assert.ok(darkest >= C.VISION_FLOOR, `${darkest} must respect the floor`);
+  assert.ok(darkest >= C.PLAYER_R * 4, "and still show more than her own body");
+});
+
+test("being hit dims the light, temporarily", () => {
+  const lit = R.visionRadius(760, 6, 0);
+  const dim = R.visionRadius(760, 6, 1.2);
+  assert.ok(dim < lit);
+  assert.equal(R.visionRadius(760, 6, 0), lit, "and comes back when the timer runs out");
+});
+
+test("all memories are a visible upgrade in the dark zone", () => {
+  const none = R.visionRadius(150, 0, 0);
+  const all = R.visionRadius(150, C.MEMORIES_TOTAL, 0);
+  assert.ok(all > none * 1.7, `${none} -> ${all} should be a real difference`);
+});
+
+// ------------------------------------------------------------------- the heal
+
+test("the heal starts at 8% and ends at exactly 100%", () => {
+  assert.equal(R.healState(0).percent, C.M_START_HP);
+  assert.equal(R.HEAL_STEPS[0], C.M_START_HP);
+  assert.equal(R.healState(R.healFullTime()).percent, 100);
+  assert.equal(R.healState(R.healFullTime()).done, true);
+});
+
+test("the heal passes through every one of the seven numbers, in order", () => {
+  const seen = [];
+  for (let t = 0; t <= R.healFullTime() + 0.5; t += 1 / 120) {
+    const p = R.healState(t).percent;
+    if (seen[seen.length - 1] !== p) seen.push(p);
   }
-  assert.ok(t > 95 && t < 145, `level takes ${t.toFixed(1)}s, should be ~120s`);
+  assert.deepEqual(seen, R.HEAL_STEPS);
 });
 
-test("the gap closes from GAP_START to GAP_END and never widens", () => {
-  assert.equal(R.gapAt(0), C.GAP_START);
-  assert.ok(Math.abs(R.gapAt(C.FINAL_CHASE_AT) - C.GAP_END) < 2);
-  let prev = Infinity;
-  for (let p = 0; p <= C.FINAL_CHASE_AT; p += 0.01) {
-    const g = R.gapAt(p);
-    assert.ok(g <= prev + 1e-9, `gap widened at progress ${p}`);
-    prev = g;
+test("holding longer than needed cannot push it past 100", () => {
+  assert.equal(R.healState(9999).percent, 100);
+  assert.equal(R.healState(9999).fill, 1);
+});
+
+test("the ring fill only ever sweeps forward", () => {
+  let prev = -1;
+  for (let t = 0; t <= R.healFullTime(); t += 1 / 120) {
+    const f = R.healState(t).fill;
+    assert.ok(f >= prev, `fill went backwards at ${t}`);
+    prev = f;
   }
 });
 
-test("stumbling slows her down, and only while the stumble lasts", () => {
-  assert.equal(R.effectiveSpeed(0.5, 0), R.speedAt(0.5));
-  assert.ok(R.effectiveSpeed(0.5, 0.3) < R.speedAt(0.5));
-  assert.equal(R.effectiveSpeed(0.5, 0.3), R.speedAt(0.5) * C.STUMBLE_SPEED_MULT);
-});
-
-test("hearts go up on collect, down on a trip, and never below zero", () => {
-  assert.equal(R.collectHeart(0), 1);
-  assert.equal(R.collectHeart(15), 16);
-  assert.equal(R.heartsAfterTrip(5), 4);
-  assert.equal(R.heartsAfterTrip(0), 0, "a trip at zero hearts must not go negative");
-});
-
-test("the secret unlocks at exactly HEARTS_REQUIRED", () => {
-  assert.equal(R.secretUnlocked(C.HEARTS_REQUIRED - 1), false);
-  assert.equal(R.secretUnlocked(C.HEARTS_REQUIRED), true);
-  assert.equal(R.secretUnlocked(C.HEARTS_REQUIRED + 4), true);
-});
-
-test("dodging every gift still leaves enough hearts to survive two trips", () => {
-  const withoutGifts = C.HEARTS_PLACED - C.GIFT_DISGUISES;
-  assert.ok(
-    withoutGifts - 2 >= C.HEARTS_REQUIRED,
-    `${withoutGifts} hearts minus two trips must still reach ${C.HEARTS_REQUIRED}`
-  );
-});
-
-test("checkpoints fire once each, in order, and never twice", () => {
-  const cps = [100, 200, 300];
-  assert.deepEqual(R.checkpointsCrossed(0, 50, cps), []);
-  assert.deepEqual(R.checkpointsCrossed(50, 150, cps), [0]);
-  assert.deepEqual(R.checkpointsCrossed(150, 150, cps), []);
-  assert.deepEqual(R.checkpointsCrossed(150, 350, cps), [1, 2], "a big frame may cross two at once");
-  assert.deepEqual(R.checkpointsCrossed(350, 400, cps), []);
-});
-
-test("the QTE sequence is JUMP JUMP SLIDE JUMP", () => {
-  assert.deepEqual(R.QTE_SEQUENCE, ["jump", "jump", "slide", "jump"]);
-});
-
-test("correct QTE inputs advance and finish the sequence", () => {
-  let q = R.newQte();
-  assert.equal(q.done, false);
-  for (const action of R.QTE_SEQUENCE) q = R.qteAdvance(q, action);
-  assert.equal(q.done, true);
-  assert.equal(q.misses, 0);
-});
-
-test("a wrong QTE input re-prompts instead of failing or advancing", () => {
-  let q = R.newQte();
-  q = R.qteAdvance(q, "slide");           // sequence wants jump
-  assert.equal(q.index, 0, "must not advance");
-  assert.equal(q.misses, 1, "must record the miss");
-  assert.equal(q.done, false, "there is no fail state");
-  q = R.qteAdvance(q, "jump");
-  assert.equal(q.index, 1, "the right input still works after a miss");
-});
-
-/*
- * The QTE reads an ACTION, and with a held slide the caller must convert the held
- * value into a rising edge before calling qteAdvance. This test pins the rule at
- * the rules level: repeated identical calls advance repeatedly, so the caller is
- * the one that must not repeat them. Do not "fix" this by making qteAdvance
- * swallow repeats — JUMP→JUMP legitimately needs two presses in a row.
- */
-test("qteAdvance advances on every call, so callers must edge-detect a held button", () => {
-  let q = R.newQte();
-  q = R.qteAdvance(q, "jump");
-  q = R.qteAdvance(q, "jump");
-  assert.equal(q.index, 2, "two calls advance twice - hence main.js must send one call per press");
-});
-
-test("qteAdvance does not mutate and ignores input once done", () => {
-  let q = R.newQte();
-  const snapshot = JSON.parse(JSON.stringify(q));
-  R.qteAdvance(q, "jump");
-  assert.deepEqual(q, snapshot);
-
-  for (const action of R.QTE_SEQUENCE) q = R.qteAdvance(q, action);
-  const after = R.qteAdvance(q, "slide");
-  assert.equal(after.index, R.QTE_SEQUENCE.length);
-  assert.equal(after.misses, 0, "a stray input after the catch must not count");
-});
-
-test("a low heart is collected just by running; a high one needs a jump", () => {
-  const low = R.collectibleBox(C.PLAYER_X, C.HEART_LOW_Y);
-  const high = R.collectibleBox(C.PLAYER_X, C.HEART_HIGH_Y);
-  const standing = R.playerBox(R.newPlayer());
-  assert.equal(R.boxesOverlap(standing, low), true, "low hearts should be free");
-  assert.equal(R.boxesOverlap(standing, high), false, "high hearts must require a jump");
-
-  let p = R.stepPlayer(R.newPlayer(), 1 / 60, { jump: true, slideHeld: false });
-  let reached = false;
-  for (let i = 0; i < 200 && !p.onGround; i++) {
-    p = R.stepPlayer(p, 1 / 60, { jump: false, slideHeld: false });
-    if (R.boxesOverlap(R.playerBox(p), high)) reached = true;
+test("each line is pinned to a percentage, and the last one is the goodbye", () => {
+  const lines = [];
+  for (let i = 0; i < R.HEAL_STEPS.length; i++) {
+    const line = R.healState(i * C.HEAL_STEP_TIME + 0.01).line;
+    if (line) lines.push(line);
   }
-  assert.ok(reached, "a jump must be able to reach a high heart");
+  assert.deepEqual(lines, [
+    "ขอบคุณนะที่เดินเข้ามาในชีวิต",
+    "ถึงระหว่างทางจะไม่ง่ายเลย",
+    "แต่เราก็ยังจับมือผ่านมันมาด้วยกัน",
+    "ขอโทษสำหรับบางครั้งที่ทำตัวไม่น่ารัก",
+    "ขอบคุณที่ยังอยู่ข้างกันเสมอ",
+    "จนวันนี้ทุกอย่างค่อย ๆ ดีขึ้น",
+    "จากนี้ก็ไปด้วยกันต่ออีกนาน ๆ นะ",
+  ]);
+  assert.equal(R.healState(R.healFullTime()).line, "จากนี้ก็ไปด้วยกันต่ออีกนาน ๆ นะ");
+});
+
+test("the heal is long enough to be a decision, not a button press", () => {
+  assert.ok(R.healFullTime() >= 6, `${R.healFullTime()}s`);
+});
+
+// ------------------------------------------------------------- colour return
+
+test("colour comes back from nothing to everything, and stops there", () => {
+  assert.equal(R.colourAt(0), 0);
+  assert.equal(R.colourAt(C.COLOUR_RETURN_TIME), 1);
+  assert.equal(R.colourAt(C.COLOUR_RETURN_TIME * 10), 1);
+  assert.ok(R.colourAt(C.COLOUR_RETURN_TIME / 2) > 0.4);
+});
+
+test("mixHex interpolates and returns the ends untouched", () => {
+  assert.equal(R.mixHex("#000000", "#ffffff", 0), "#000000");
+  assert.equal(R.mixHex("#000000", "#ffffff", 1), "#ffffff");
+  assert.equal(R.mixHex("#000000", "#ffffff", 0.5), "#808080");
+  assert.equal(R.mixHex("#131319", "#ffffff", 0), "#131319");
+});
+
+test("mixHex clamps out-of-range t instead of producing nonsense", () => {
+  assert.equal(R.mixHex("#000000", "#ffffff", -3), "#000000");
+  assert.equal(R.mixHex("#000000", "#ffffff", 7), "#ffffff");
+});
+
+test("paletteAt blends every key of a palette pair", () => {
+  const pair = {
+    cold: { floor: "#000000", ink: "#101010" },
+    warm: { floor: "#ffffff", ink: "#303030" },
+  };
+  const cold = R.paletteAt(pair, 0);
+  assert.deepEqual(cold, pair.cold);
+  assert.deepEqual(R.paletteAt(pair, 1), pair.warm);
+  assert.equal(R.paletteAt(pair, 0.5).ink, "#202020");
 });

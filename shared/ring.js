@@ -10,10 +10,40 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const MIN_SLOTS = 6;
-  // Centre-to-centre spacing as a multiple of card width. 5/3 makes a 6-slot ring
-  // of 150px cards land at radius 250 — the spacing in the approved mockup.
+  /*
+   * The fewest slots the ring will ever have, and so the number of ghost cards a
+   * short manifest gets padded out to.
+   *
+   * 3, not 6: with three chapters written a floor of 6 padded the ring with three
+   * "coming soon" cards for chapters that were not planned, which promised more
+   * than exists. Raise this only to reserve real, intended slots.
+   *
+   * This is also the reference ring for ringZOffset — the size at which the front
+   * card sits at its natural scale — so changing it changes how large the front
+   * card renders at every ring size, not just small ones.
+   */
+  const MIN_SLOTS = 3;
+  // Centre-to-centre spacing as a multiple of card width. 5/3 keeps a gap of two
+  // thirds of a card between neighbours at any ring size.
   const CARD_GAP_FACTOR = 5 / 3;
+
+  /*
+   * A chapter's backdrop art, as candidates rather than one path.
+   *
+   * The extension is not knowable from the id: the art is hand-made per chapter
+   * and arrives as whatever the source exported — 01 is a .jpg, 02 a .png. Rather
+   * than force a convention on the files (or add a path field to chapters.js,
+   * which is meant to stay id-derived), both are offered and hub.js keeps the one
+   * that actually loads. Order is the preference: .jpg first, since a background
+   * this size should be one.
+   */
+  const BACKDROP_EXTS = ["jpg", "png"];
+
+  function backdropCandidates(id) {
+    return BACKDROP_EXTS.map(function (ext) {
+      return "shared/background/" + id + "." + ext;
+    });
+  }
 
   function normalizeChapters(raw) {
     if (!Array.isArray(raw)) return [];
@@ -30,10 +60,30 @@
           subtitle: typeof entry.subtitle === "string" ? entry.subtitle : "",
           cover: "chapters/" + id + "/cover.jpg",
           href: "chapters/" + id + "/index.html",
+          backdrop: backdropCandidates(id),
+          /*
+           * What the hub fades to on the way into this chapter. Each chapter page
+           * sets its own background, and they disagree — valentine is pink, the
+           * birthday game is near-black — so a single exit colour would flash
+           * against one of them. Defaults to the game's dark, which is also the
+           * safer of the two to land on.
+           */
+          exit: typeof entry.exit === "string" && entry.exit.trim() ? entry.exit.trim() : "#0b1020",
         });
       } else {
         // Unbuilt: ignore every other field so nothing leaks onto a ghost card.
-        out.push({ id: id, status: "soon", title: null, subtitle: "", cover: null, href: null });
+        // No backdrop either — hovering an unbuilt chapter must not reveal art
+        // for something that does not exist yet.
+        out.push({
+          id: id,
+          status: "soon",
+          title: null,
+          subtitle: "",
+          cover: null,
+          href: null,
+          backdrop: [],
+          exit: null,
+        });
       }
     }
     return out;
@@ -96,6 +146,8 @@
         subtitle: "",
         cover: null,
         href: null,
+        backdrop: [],
+        exit: null,
       });
     }
     return out;
@@ -114,6 +166,19 @@
   function snapRotation(rotation, slots) {
     const step = 360 / slots;
     return Math.round(rotation / step) * step;
+  }
+
+  /*
+   * How centred the focused card is on the front of the ring, from 0 (right
+   * at the hand-off point to a neighbour) to 1 (dead centre). Drives the
+   * focus text's fade so it tracks the ring's actual position instead of a
+   * fixed timer decoupled from it.
+   */
+  function focusIntensity(rotation, index, slots) {
+    const step = 360 / slots;
+    const angle = (((rotation + index * step) % 360) + 540) % 360 - 180;
+    const half = step / 2;
+    return Math.max(0, 1 - Math.abs(angle) / half);
   }
 
   function focusIndexFromSearch(search, chapters) {
@@ -137,6 +202,7 @@
     slotAngle: slotAngle,
     nearestSlotIndex: nearestSlotIndex,
     snapRotation: snapRotation,
+    focusIntensity: focusIntensity,
     focusIndexFromSearch: focusIndexFromSearch,
   };
 });

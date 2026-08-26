@@ -4,17 +4,35 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>Chapters</title>
-  <link rel="stylesheet" href="shared/base.css" />
+  <script>
+    // Chapter 2's ending cuts here mid-flash (full white, held) rather than
+    // fading back down first — a real page load can't animate through the
+    // navigation itself, so #returnFlash starts pre-painted opaque (see
+    // base.css) and hub.js fades IT down instead once the hub underneath is
+    // ready, continuing the same flash rather than cutting hard into a dark
+    // hub. Every other visit needs that overlay gone before first paint, not
+    // faded — this has to run before body parses, or the hub would flash
+    // visible for a frame first either way.
+    var mbFromFlash = false;
+    try { mbFromFlash = window.sessionStorage.getItem("mybabe:fromFlash") === "1"; } catch (e) { /* storage unavailable */ }
+    if (!mbFromFlash) document.documentElement.classList.add("mb-no-return-flash");
+  </script>
+  <link rel="stylesheet" href="shared/fonts.css?v=full-restore" />
+  <link rel="stylesheet" href="shared/base.css?v=return-flash-long" />
+  <link rel="stylesheet" href="shared/prepage.css?v=full-restore" />
 </head>
 <body>
   <main class="hub">
-    <p class="hub-hint" id="hint">drag to spin &middot; click a card to enter</p>
+    <div class="hub-backdrop" data-layer="0" aria-hidden="true"></div>
+    <div class="hub-backdrop" data-layer="1" aria-hidden="true"></div>
+
+    <p class="hub-hint" id="hint">เลื่อนด้วย &larr; &rarr; &middot; กด Enter เพื่อเปิด</p>
 
     <div class="stage" id="stage">
       <div class="ring" id="ring"></div>
     </div>
 
-    <div class="focus">
+    <div class="focus" id="chapterSplash" aria-live="polite">
       <p class="focus-num" id="focusNum"></p>
       <h1 class="focus-name" id="focusName"></h1>
       <p class="focus-sub" id="focusSub"></p>
@@ -22,10 +40,25 @@
     </div>
   </main>
 
-  <div class="fade" id="fade"></div>
+  <button class="music" id="musicBtn" type="button" aria-pressed="false"
+          aria-label="เปิดเพลง">&#128266;</button>
 
-  <script src="chapters.js"></script>
-  <script src="shared/ring.js"></script>
-  <script src="shared/hub.js"></script>
+  <div class="prepage" id="prepage" hidden>
+    <div class="prepage-art" aria-hidden="true"></div>
+    <div class="prepage-cats" id="prepageCats" aria-hidden="true"></div>
+    <div class="prepage-inner">
+      <h1 class="prepage-title">Our Little Tale</h1>
+      <button class="prepage-btn" id="prepageBtn" type="button">Enter</button>
+    </div>
+  </div>
+
+  <div class="fade" id="fade"></div>
+  <div class="return-flash" id="returnFlash"></div>
+
+  <script src="chapters.js?v=full-restore"></script>
+  <script src="shared/ring.js?v=chapter2-sunset"></script>
+  <script src="shared/hub.js?v=return-flash-long"></script>
+  <script src="shared/music.js?v=full-restore"></script>
+  <script src="shared/prepage.js?v=normal-ting"></script>
 </body>
 </html>
