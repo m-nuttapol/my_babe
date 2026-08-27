@@ -1224,8 +1224,11 @@
               // actually holds at full white first, not on envSkip's plain
               // click-through.
               after(1600, function () {
+                // Not hide(): that would drop the opaque flash overlay and
+                // expose the bare game canvas behind it for the moment
+                // before window.location.href actually finishes navigating
+                // away — the flash has to stay up until the page is gone.
                 window.sessionStorage.setItem("mybabe:fromFlash", "1");
-                hide();
                 goHub();
               });
             });

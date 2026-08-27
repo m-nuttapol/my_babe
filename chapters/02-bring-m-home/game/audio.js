@@ -198,9 +198,10 @@
   }
 
   function fadeBed(seconds) {
-    if (!bed) return;
-    ramp(bed.gain.gain, 0, seconds || 1.5);
-    ramp(bed.rainGain.gain, 0, seconds || 1.5);
+    if (bed) {
+      ramp(bed.gain.gain, 0, seconds || 1.5);
+      ramp(bed.rainGain.gain, 0, seconds || 1.5);
+    }
     if (zoneMusicGain) ramp(zoneMusicGain.gain, 0, seconds || 1.5);
   }
 
