@@ -68,6 +68,27 @@
   window.addEventListener("resize", function () { ctx = root.Render.resize(canvasEl); });
   root.Input.attach(canvasEl);
 
+  /*
+   * Belt and suspenders for WebAudio's autoplay gate. Scenes.showCutscene()
+   * already calls Audio2.unlock() at the cutscene's own start (inside a
+   * preload().then() — no real gesture behind it, so on strict engines
+   * (iOS Safari especially) AudioContext.resume() there silently no-ops)
+   * and again when the title card is tapped through (that one IS inside a
+   * real pointerdown, so it should genuinely resume it) — but that second
+   * call depends on the player actually reaching and tapping past the
+   * title card. This catches every other real gesture too — the same
+   * fix DEV_JUMP_TO_ENDING below already had to add for its own path once
+   * sfx() calls (blip-routed ones especially: beat, notify, ting, step)
+   * turned out to be silently no-op'ing on a still-suspended context.
+   */
+  function unlockAudioOnce() {
+    root.Audio2.unlock();
+    window.removeEventListener("pointerdown", unlockAudioOnce, true);
+    window.removeEventListener("keydown", unlockAudioOnce, true);
+  }
+  window.addEventListener("pointerdown", unlockAudioOnce, true);
+  window.addEventListener("keydown", unlockAudioOnce, true);
+
   const zones = Z.buildAll();
   /* Retrace every currently authored zone in reverse; Zone 2 can be inserted
      later without another hard-coded index becoming invalid. */
