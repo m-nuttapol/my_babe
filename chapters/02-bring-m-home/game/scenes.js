@@ -122,11 +122,15 @@
    * all painted into them — so this file only has to time them and get between
    * them the right way.
    *
-   * Most later frames use WebP for speed. Edited story frames stay as source
-   * PNGs so their lettering and cat details remain exact.
+   * Every frame uses WebP for speed. The first five used to stay on their
+   * source PNGs ("edited story frames... so their lettering and cat details
+   * remain exact") because their .webp siblings were stale renders from
+   * before those edits — re-exported from the current PNGs (cwebp -q 80),
+   * so the detail concern no longer applies and they get the same size win
+   * frames 4-9 already had (1.6-2MB each down to under 120KB).
    */
   const SHOTS = [
-    { src: "assets/cutscene/1.png", hold: 6200,
+    { src: "assets/cutscene/1.webp", hold: 6200,
       start: ["introPiano"] },
 
     /*
@@ -134,22 +138,22 @@
      * begins. Holds on the first two shots are long because the laughter and the
      * buzzing need room to be heard, not because the pictures need the time.
      */
-    { src: "assets/cutscene/pre1.png", via: "dissolve", dur: 1200, hold: 4200,
+    { src: "assets/cutscene/pre1.webp", via: "dissolve", dur: 1200, hold: 4200,
       start: ["girlLaugh", { name: "manLaugh", delay: 500 }],
       stop: [{ name: "introPiano", fade: 1200 }] },
 
-    { src: "assets/cutscene/pre2.png", via: "dissolve", dur: 1400, hold: 3200,
+    { src: "assets/cutscene/pre2.webp", via: "dissolve", dur: 1400, hold: 3200,
       start: ["phone"],
       stop: [{ name: "girlLaugh", fade: 1400 }, { name: "manLaugh", fade: 1400 }] },
 
     // Cut from the ringing phone to his reaction; the notification pressure then
     // builds over this shot instead of returning to the opening image.
-    { src: "assets/cutscene/pre3.png", via: "pullaway", dur: 900, hold: 1200,
+    { src: "assets/cutscene/pre3.webp", via: "pullaway", dur: 900, hold: 1200,
       cardsAfter: true,
       stop: [{ name: "phone", fade: 900 }] },
 
     // The lights go out, and something in the dark starts enjoying itself.
-    { src: "assets/cutscene/3.png", via: "darken", dur: 1500, hold: 2600,
+    { src: "assets/cutscene/3.webp", via: "darken", dur: 1500, hold: 2600,
       start: ["powerDown", { name: "neverLetGo", delay: 1500 },
               { name: "scaryLaugh", delay: 13400 }] },
 

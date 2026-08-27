@@ -233,7 +233,11 @@
         playOneShot("enemyDisappear");
         break;
       case "hit":
-        playOneShot("enemyDisappear");
+        // A monster reaching her, not an enemy she shot — reusing
+        // enemyDisappear's quiet vol (0.24, -31dB source) made this the
+        // faintest cue in the game for what should be the most felt one.
+        // Same file, its own louder entry.
+        playOneShot("hitImpact");
         break;
       case "memory":
         playClip("memoryPick");
@@ -304,6 +308,7 @@
   const CLIPS = {
     magicCast:  { src: "assets/audio/twinkle_soft.mp3", vol: 0.24 },
     enemyDisappear:{ src: "assets/audio/_sound-originals/disapper.mp3", vol: 0.24 },
+    hitImpact:  { src: "assets/audio/_sound-originals/disapper.mp3", vol: 0.7 },
     door:       { src: "assets/audio/_sound-originals/sound_door.mp3", vol: 0.6 },
     heartFlash: { src: "assets/audio/flash.mp3", vol: 0.7 },
     cameraShutter: { src: "assets/audio/camera_sound.mp3", vol: 0.7 },
@@ -327,7 +332,12 @@
     // (not one clean click) — played once, in full, under the envelope's
     // typewriter reveal rather than retriggered per character.
     envType:    { src: "assets/audio/keyboard_type.mp3", vol: 0.55 },
-    memoryPick: { src: "assets/audio/_sound-originals/starpick.mp3", vol: 0.26 },
+    // 0.26 measured as quiet as enemyDisappear (-32dB source, no comment
+    // justifying it the way that one has) — but this fires for two of the
+    // most meaningful discrete moments in the game (a story memory picked
+    // up, the heart/star set down on its pedestal), so it should read as a
+    // real sound, not vanish into the mix the way it was.
+    memoryPick: { src: "assets/audio/_sound-originals/starpick.mp3", vol: 0.62 },
     memoryKept: { src: "assets/audio/_sound-originals/starkept.mp3", vol: 0.26 },
     introPiano: { src: "assets/audio/piano_intro.mp3",       vol: 0.85 },
     girlLaugh:  { src: "assets/audio/girl_laught.mp3",      vol: 0.95 },
