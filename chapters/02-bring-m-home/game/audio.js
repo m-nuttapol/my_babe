@@ -274,9 +274,15 @@
         playOneShot("envType");
         break;
       case "beat":
-        // M's pulse under the heal. Two thumps, the second softer.
+        // M's pulse under the heal, and the thump when the heart goes down
+        // on the pedestal. Two thumps, the second softer. 52-58Hz alone
+        // sits below what most phone/laptop speakers actually reproduce —
+        // a short higher-pitched knock rides along each thump so it reads
+        // as a real sound on small speakers, not just on headphones/subs.
         blip(58, 0.16, "sine", 0.5);
+        blip(180, 0.05, "sine", 0.22);
         blip(52, 0.13, "sine", 0.3, 0.17);
+        blip(160, 0.04, "sine", 0.16, 0.17);
         break;
       case "step":
         blip(1200, 0.05, "triangle", 0.12);
